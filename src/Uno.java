@@ -80,6 +80,11 @@ public class Uno {
 
         // Place first card on discard pile
         lastPlayedCard = deck.remove(0);
+        if (lastPlayedCard.suit.equals("Wild")) {
+            System.out.println("setting wild to a random color");
+            // If first card is wild, set it to a random color
+            lastPlayedCard.suit = colors[(int) (Math.random() * colors.length)];
+        }
         discardPile.add(lastPlayedCard);
 
         // Initialize draw button
@@ -136,12 +141,32 @@ public class Uno {
             // Add to discard pile
             discardPile.add(card);
             lastPlayedCard = card;
+            if ("Reverse".equals(card.value)) {
+                // gives another turn
+                return true;
+            }
+            // handle special cards
+            handleSpecialCards(card);
             // Switch turns
             switchTurns();
             return true;
         }
         System.out.println("Invalid play: " + card.value + " of " + card.suit);
         return false;
+    }
+
+    private void handleSpecialCards(UnoCard card) {
+        if (card.value.equals("Skip")) {
+            System.out.println("Skipping opponent's turn");
+            switchTurns(); // Skip opponent's turn
+        } else if (card.value.startsWith("Draw ")) {
+            System.out.println("Skipping opponent's turn");
+            int drawNum = "Draw Two".equals(card.value) ? 2 : 4;
+            for (int i = 0; i < drawNum; i++) {
+                drawCard(playerOneTurn ? playerTwoHand : playerOneHand);
+            }
+            switchTurns();
+        }
     }
 
     private boolean isValidPlay(UnoCard card) {
@@ -162,16 +187,11 @@ public class Uno {
             drawCard(playerOneHand);
             // Switch turns after drawing
             switchTurns();
-            handleComputerTurn();
         }
     }
 
     public UnoCard getLastPlayedCard() {
         return lastPlayedCard;
-    }
-
-    public Hand getCurrentPlayerHand() {
-        return playerOneTurn ? playerOneHand : playerTwoHand;
     }
 
     public String getCurrentPlayer() {
@@ -180,10 +200,6 @@ public class Uno {
 
     public int getDeckSize() {
         return deck.size();
-    }
-
-    public int getDiscardPileSize() {
-        return discardPile.size();
     }
 
     public void handleCardClick(int mouseX, int mouseY) {
@@ -224,7 +240,6 @@ public class Uno {
             if (playCard(selectedCard, playerOneHand)) {
                 selectedCard.setSelected(false, raiseAmount);
                 selectedCard = null;
-                handleComputerTurn();
             }
             return;
         }
@@ -280,7 +295,6 @@ public class Uno {
                     choosingWildColor = false;
                     playerOneHand.positionCards(50, 450, 80, 120, 20);
                     playerTwoHand.positionCards(50, 50, 80, 120, 20);
-                    handleComputerTurn();
                 }
                 return;
             }
@@ -307,11 +321,7 @@ public class Uno {
         return button;
     }
 
-    private void handleComputerTurn() {
-        if (playerOneTurn) {
-            return;
-        }
-
+    public void handleComputerTurn() {
         UnoCard choice = computerPlayer.playCard(playerTwoHand, lastPlayedCard);
         if (choice == null) {
             drawCard(playerTwoHand);
@@ -320,15 +330,14 @@ public class Uno {
             switchTurns();
             return;
         }
-
-        if (playCard((UnoCard) choice, playerTwoHand)) {
+        if (playCard(choice, playerTwoHand)) {
             if ("Wild".equals(choice.suit)) {
                 choice.suit = computerPlayer.chooseComputerWildColor(playerTwoHand);
             }
             playerOneHand.positionCards(50, 450, 80, 120, 20);
             playerTwoHand.positionCards(50, 50, 80, 120, 20);
         } else {
-            System.out.println("ERROR, playertwo chose an invalid play");
+            System.out.println("ERROR, player two / computer chose an invalid play");
         }
     }
 }

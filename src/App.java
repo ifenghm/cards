@@ -3,6 +3,7 @@ import processing.core.PApplet;
 public class App extends PApplet {
 
     Uno unoGame = new Uno();
+    private int timer;
 
     public static void main(String[] args) {
         PApplet.main("App");
@@ -54,6 +55,16 @@ public class App extends PApplet {
         if (unoGame.getLastPlayedCard() != null) {
             unoGame.getLastPlayedCard().setPosition(width / 2 - 40, height / 2 - 60, 80, 120);
             unoGame.getLastPlayedCard().draw(this);
+        }
+        if (unoGame.getCurrentPlayer() == "Player Two") {
+            fill(0);
+            textSize(16);
+            text("Computer is thinking...", width / 2, height / 2 + 80);
+            timer++;
+            if (timer == 100) {
+                unoGame.handleComputerTurn();
+                timer = 0;
+            }
         }
 
         unoGame.drawWildChooser(this);
