@@ -1,5 +1,3 @@
-import java.util.ArrayList;
-import java.util.Collections;
 import processing.core.PApplet;
 
 public class Uno extends CardGame {

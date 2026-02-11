@@ -11,7 +11,6 @@ public class ClickableRectangle {
                mouseY >= y && mouseY <= y + height;
     }
 
-
     public void draw(PApplet app) {
         app.rect(x, y, width, height);
     } 

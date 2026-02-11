@@ -6,9 +6,6 @@ public class Hand {
     public Hand() {
         cards = new ArrayList<>();
     }
-    public Hand(boolean isPlayerOne) {
-        cards = new ArrayList<>();
-    }
     
     public void addCard(Card card) {
         cards.add(card);
