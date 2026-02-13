@@ -10,7 +10,7 @@ public class Uno extends CardGame {
     int wildCenterX = 300;
     int wildCenterY = 300;
     static String[] colors = { "Red", "Yellow", "Green", "Blue" };
-    static String[] values = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "Skip", "Reverse", "Draw Two" };
+    static String[] values = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "Skip", "Reverse", "Draw Two" };
 
     public Uno() {
         initializeGame();
@@ -21,19 +21,18 @@ public class Uno extends CardGame {
         // Create deck (Uno has 108 cards)
         // Create standard cards (2 of each color/value combination except 0)
         for (String color : colors) {
-            deck.add(createCard(color, "0")); // One 0 card per color
+            deck.add(new Card("0", color)); // One 0 card per color
             for (String value : values) {
-                if (!value.equals("0")) {
-                    deck.add(createCard(color, value));
-                    deck.add(createCard(color, value)); // Two of each
-                }
+                deck.add(new Card(value, color));
+                deck.add(new Card(value, color)); // Two of each
+
             }
         }
         // Add wild cards (4 of each type)
         for (int i = 0; i < 4; i++) {
             // suit, value
-            deck.add(createCard("Wild", "Wild"));
-            deck.add(createCard("Wild", "Draw Four"));
+            deck.add(new Card("Wild", "Wild"));
+            deck.add(new Card("Wild", "Draw Four"));
         }
     }
 
@@ -52,57 +51,6 @@ public class Uno extends CardGame {
         discardPile.add(lastPlayedCard);
 
         initializeWildColorButtons();
-    }
-
-    private UnoCard createCard(String suit, String value) {
-        UnoCard card = new UnoCard(suit, value); // Image loading can be added later
-        card.suit = suit;
-        card.value = value;
-        return card;
-    }
-
-    @Override 
-    public boolean playCard(Card card, Hand hand) {
-        super.playCard(card, hand);
-        handleSpecialCards(card);
-        return true;
-    }
-
-    private void handleSpecialCards(Card card) {
-        if (card.value.equals("Skip") || card.value.equals("Reverse")) {
-            // right now this only supports 2 players, so Reverse is the same as Skip
-            System.out.println("Skipping opponent's turn"); 
-            switchTurns(); // Skip opponent's turn
-        } else if (card.value.startsWith("Draw ")) {
-            System.out.println("Skipping opponent's turn");
-            int drawNum = "Draw Two".equals(card.value) ? 2 : 4;
-            for (int i = 0; i < drawNum; i++) {
-                // refactored into superclass, assuming you've already switched turns to the opponent
-                drawCard(playerOneTurn ? playerOneHand : playerTwoHand);
-            }
-            switchTurns();
-        }
-    }
-
-    @Override
-    public void handleDrawButtonClick(int mouseX, int mouseY) {
-        if (choosingWildColor) {
-            return;
-        }
-        super.handleDrawButtonClick(mouseX, mouseY);
-    }
-
-    @Override
-    protected boolean isValidPlay(Card card) {
-        UnoCard unoCard = (UnoCard) card;
-        // Wild cards are always valid
-        if (unoCard.suit.equals("Wild")) {
-            return true;
-        }
-        // Card must match suit or value of last played card
-        UnoCard lastUno = (UnoCard) lastPlayedCard;
-        return unoCard.suit.equals(lastUno.suit) ||
-                unoCard.value.equals(lastUno.value);
     }
 
     @Override
@@ -139,6 +87,43 @@ public class Uno extends CardGame {
         selectedCard.setSelected(false, selectedCardRaiseAmount);
         selectedCard = clickedCard;
         selectedCard.setSelected(true, selectedCardRaiseAmount);
+    }
+
+    @Override
+    protected boolean isValidPlay(Card card) {
+        UnoCard unoCard = (UnoCard) card;
+        // Wild cards are always valid
+        if (unoCard.suit.equals("Wild")) {
+            return true;
+        }
+        // Card must match suit or value of last played card
+        UnoCard lastUno = (UnoCard) lastPlayedCard;
+        return unoCard.suit.equals(lastUno.suit) ||
+                unoCard.value.equals(lastUno.value);
+    }
+
+    @Override
+    public boolean playCard(Card card, Hand hand) {
+        super.playCard(card, hand);
+        handleSpecialCards(card);
+        return true;
+    }
+
+    private void handleSpecialCards(Card card) {
+        if (card.value.equals("Skip") || card.value.equals("Reverse")) {
+            // right now this only supports 2 players, so Reverse is the same as Skip
+            System.out.println("Skipping opponent's turn");
+            switchTurns(); // Skip opponent's turn
+        } else if (card.value.startsWith("Draw ")) {
+            System.out.println("Skipping opponent's turn");
+            int drawNum = "Draw Two".equals(card.value) ? 2 : 4;
+            for (int i = 0; i < drawNum; i++) {
+                // refactored into superclass, assuming you've already switched turns to the
+                // opponent
+                drawCard(playerOneTurn ? playerOneHand : playerTwoHand);
+            }
+            switchTurns();
+        }
     }
 
     @Override
