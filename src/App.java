@@ -2,7 +2,7 @@ import processing.core.PApplet;
 
 public class App extends PApplet {
 
-    CardGame cardGame = new Uno();
+    CardGame cardGame = new MonopolyDeal();
     private int timer;
 
     public static void main(String[] args) {
@@ -17,19 +17,9 @@ public class App extends PApplet {
     public void draw() {
         background(255);
         // Draw player hands
-        for (int i = 0; i < cardGame.playerOneHand.getSize(); i++) {
-            Card card = cardGame.playerOneHand.getCard(i);
-            if (card != null) {
-                card.draw(this);
-            }
-        }
+        cardGame.playerOneHand.draw(this);
         // Draw computer hand
-        for (int i = 0; i < cardGame.playerTwoHand.getSize(); i++) {
-            Card card = cardGame.playerTwoHand.getCard(i);
-            if (card != null) {
-                card.draw(this);
-            }
-        }
+        cardGame.playerTwoHand.draw(this);
         
         // Draw draw button
         fill(200);

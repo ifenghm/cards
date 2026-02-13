@@ -1,5 +1,7 @@
 import java.util.ArrayList;
 
+import processing.core.PApplet;
+
 public class Hand {
     private ArrayList<Card> cards;
     
@@ -44,6 +46,12 @@ public class Hand {
             int x = startX + (col * spacing);
             int y = startY + (row * spacing);
             cards.get(i).setPosition(x, y, cardWidth, cardHeight);
+        }
+    }
+
+    void draw(PApplet sketch) {
+        for (Card card : cards) {
+            card.draw(sketch);
         }
     }
 }
