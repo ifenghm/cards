@@ -2,7 +2,8 @@ import processing.core.PApplet;
 
 public class App extends PApplet {
 
-    CardGame cardGame = new MonopolyDeal();
+    CardGame cardGame = new CardGame();
+    int gameWidth = 800;
     private int timer;
 
     public static void main(String[] args) {
@@ -10,7 +11,7 @@ public class App extends PApplet {
     }
     @Override
     public void settings() {
-        size(600, 600);   
+        size(gameWidth, gameWidth);   
     }
 
     @Override
@@ -22,11 +23,7 @@ public class App extends PApplet {
         cardGame.playerTwoHand.draw(this);
         
         // Draw draw button
-        fill(200);
         cardGame.drawButton.draw(this);
-        fill(0);
-        textAlign(CENTER, CENTER);
-        text("Draw", cardGame.drawButton.x + cardGame.drawButton.width / 2, cardGame.drawButton.y + cardGame.drawButton.height / 2);
 
         // Display current player
         fill(0);

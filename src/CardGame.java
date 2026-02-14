@@ -36,6 +36,7 @@ public class CardGame {
         drawButton.y = drawButtonY;
         drawButton.width = drawButtonWidth;
         drawButton.height = drawButtonHeight;
+        drawButton.text = "Draw";
 
         // Initialize decks and hands
         deck = new ArrayList<>();

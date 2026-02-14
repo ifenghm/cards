@@ -18,6 +18,7 @@ public class MonopolyCard extends Card {
 
     @Override
     public void drawFront(PApplet sketch) {
+        sketch.push();
         super.drawFront(sketch);
         // set card color based on suit
         switch (suit) {
@@ -47,6 +48,7 @@ public class MonopolyCard extends Card {
             sketch.text("$" + value, x + width / 2 - 12, y + height / 2 + 16);
             sketch.textSize(14);
         }
+        sketch.pop();
     }
 }
 
@@ -68,6 +70,7 @@ class PropertyCard extends MonopolyCard {
 
     @Override
     public void drawFront(PApplet sketch) {
+        sketch.push();
         super.drawFront(sketch);
         // draw the color bar at the top of the card
         switch (color) {
@@ -112,6 +115,7 @@ class PropertyCard extends MonopolyCard {
             sketch.textSize(16);
             sketch.text("✓", x + width - 20, y + 20);
         }
+        sketch.pop();
     }
 }
 

@@ -1,5 +1,7 @@
 import java.util.HashMap;
 
+import processing.core.PApplet;
+
 public class MonopolyDeal extends CardGame {
     // i need to be able to steal sets rather than just one property card
     // so we need to be able to select a "set" based on the selected card.
@@ -20,17 +22,28 @@ public class MonopolyDeal extends CardGame {
     static final String DEBT_COLLECTOR = "Debt Collector";
     static final String BIRTHDAY = "It's My Birthday";
 
+    static final int HAND_SPACING = 80;
+    static final int X_START = 30;
+    static final int Y_START = 650;
+
+    int playsCount = 0; // keeps track of the number of plays by the current player
+
     // counts of each property types
     HashMap<String, Integer> propertyCounts;
+    static final int buttonsX = 700;
+    ClickableRectangle endTurnButton = new ClickableRectangle(buttonsX, Y_START + drawButtonHeight + 15, 80,
+            drawButtonHeight, "End");
 
     MonopolyDeal() {
+
         initializeGame();
-        playerOneHand = new MonopolyHand();
-        playerTwoHand = new MonopolyHand(); // specifically a monopoly hand
+        drawButton = new ClickableRectangle(buttonsX, Y_START, 80, drawButtonHeight, "Draw");
+        playerOneHand = new MonopolyHand(1);
+        playerTwoHand = new MonopolyHand(2);
         dealCards(5);
         // position cards
-        playerOneHand.positionCards(50, 450, 80, 120, 80);
-        playerTwoHand.positionCards(50, 50, 80, 120, 80);
+        playerOneHand.positionCards(X_START, Y_START, HAND_SPACING, 120, HAND_SPACING);
+        playerTwoHand.positionCards(X_START, 30, HAND_SPACING, 120, HAND_SPACING);
     }
 
     public Hand getCurrentPlayerHand() {
@@ -101,4 +114,52 @@ public class MonopolyDeal extends CardGame {
         }
     }
 
+    @Override
+    public void handleDrawButtonClick(int mouseX, int mouseY) {
+        if (drawButton.isClicked(mouseX, mouseY) && playerOneTurn) {
+            drawCard(playerOneHand);
+            drawCard(playerOneHand);
+            playerOneHand.positionCards(X_START, Y_START, HAND_SPACING, 120, HAND_SPACING);
+            playerTwoHand.positionCards(X_START, 30, HAND_SPACING, 120, HAND_SPACING);
+        }
+        // also handle end turn
+        if (endTurnButton.isClicked(mouseX, mouseY) && playerOneTurn) {
+            switchTurns();
+            playsCount = 0; // reset play count for new turn
+        }
+    }
+
+    @Override 
+    public boolean playCard(Card card, Hand hand) {
+        // If Money card, add to bank pile
+        if (card.suit.equals("Money")) {
+            ((MonopolyHand) hand).bankPile.addCard(card);
+        } else if (card.suit.equals("Property")) {
+            ((MonopolyHand) hand).propertyPile.addCard(card);
+        }
+        // Remove card from hand
+        hand.removeCard(card);
+        playsCount++;
+        return true;
+    }
+
+    @Override
+    public void drawChoices(PApplet sketch) {
+        endTurnButton.draw(sketch);
+    }
+
+    @Override
+    public void switchTurns() {
+        playerOneTurn = !playerOneTurn;
+    }
+
+    @Override
+    public void handleComputerTurn() {
+        // TODO: implement actual computer logic
+        drawCard(playerTwoHand);
+        drawCard(playerTwoHand);
+        playerOneHand.positionCards(X_START, Y_START, HAND_SPACING, 120, HAND_SPACING);
+        playerTwoHand.positionCards(X_START, 30, HAND_SPACING, 120, HAND_SPACING);
+        switchTurns();
+    }
 }
