@@ -50,4 +50,12 @@ public class MonopolyHand extends Hand {
         propertyPile.draw(sketch);
         sketch.pop();
     }
+
+    public int getMoney() {
+        int total = 0;
+        for (Card card : bankPile.getCards()) {
+            total += Integer.parseInt(card.value);
+        }
+        return total;
+    }
 }

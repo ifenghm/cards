@@ -1,3 +1,5 @@
+import java.util.List;
+
 import processing.core.PApplet;
 
 public class MonopolyCard extends Card {
@@ -121,7 +123,7 @@ class PropertyCard extends MonopolyCard {
 class ActionCard extends MonopolyCard {
     MonopolyDeal game; // need to affect the game here
     // action cards have an action type, which is the value field.
-    String action;
+    public String action;
     public ActionCard(String value, String action, MonopolyDeal game) {
         super(value, "Action");
         this.action = action;
@@ -142,11 +144,14 @@ class ActionCard extends MonopolyCard {
             game.getCurrentPlayerHand().addCard(game.deck.remove(0));
         } else if (MonopolyFields.SLY_DEAL.equals(action)) {
             // steal a property from opponent
-            ((MonopolyHand) game.getCurrentPlayerHand()).propertyPile.addCard(game.selectedCard);
-            if (game.playerOneTurn) {
-                ((MonopolyHand) game.playerTwoHand).propertyPile.removeCard(game.selectedCard);
-            } else {
-                ((MonopolyHand) game.playerOneHand).propertyPile.removeCard(game.selectedCard);
+            MonopolyHand opponentHand = game.playerOneTurn ? (MonopolyHand) game.playerTwoHand
+                    : (MonopolyHand) game.playerOneHand;
+            List<MonopolyCard> stealable = game.stolenCards;
+            if (!stealable.isEmpty()) {
+                MonopolyCard stolen = stealable.get(0);
+                opponentHand.propertyPile.removeCard(stolen);
+                ((MonopolyHand) game.getCurrentPlayerHand()).propertyPile.addCard(stolen);
+                game.stolenCards.remove(stolen);    
             }
         } else if (MonopolyFields.DEAL_BREAKER.equals(action)) {
             // steal a complete set from opponent
@@ -165,6 +170,10 @@ class ActionCard extends MonopolyCard {
         
         // Remove the action card from player's hand after performing action
         game.playCard(this, game.getCurrentPlayerHand());
+    }
+
+    public String getAction() {
+        return action;
     }
 }
 

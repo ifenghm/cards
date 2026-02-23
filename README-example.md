@@ -9,8 +9,9 @@ I am planning to add **Monopoly Deal** as a Card Game.
   - [x] 2/18 For Monopoly Deal extend CardGame, create the different deck cards
      - Subclasses of MonopolyCard ($ value) is BankCard, PropertyCard, and Action 
   - [x] 2/20 MonopolyHand extends Hand, and in the hand, players have a properties array and a bank: an array of MoneyCards. allow to place separately on the board.
-  - [-] 2/25 Allow to run playCard() up to three times before switching turns, and determine isValidPlay() if you can charge rent on if you have any properties; can charge broke ppl, can run deals 
-  - [ ] 2/27 Make a MonopolyComputer to make the right decisions. 
+  - [x] 2/25 Allow to run playCard() up to three times before switching turns, and determine isValidPlay() if you can charge rent on if you have any properties; can charge broke ppl, can run deals 
+  - [x] 2/27 Make a MonopolyComputer to make decisions on what to play 
+  - [ ] 3/1 Create interface for taking money and choosing properties to steal
   - [ ] 3/2 Ambitious: Deal Breaker!! (hard, not necessary, but the game is better because of it) Add House/Hotel subclasses (kinda boring), Just Say No
 
 

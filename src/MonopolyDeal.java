@@ -1,4 +1,6 @@
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import processing.core.PApplet;
 
@@ -13,11 +15,12 @@ public class MonopolyDeal extends CardGame {
     int playsCount = 0; // keeps track of the number of plays by the current player
 
     boolean choosingAction = false; // whether the player is currently choosing which action to play
-    boolean playingAsAction = false; // whether the player is currently choosing how to play an action card
+    List<MonopolyCard> stolenCards = new ArrayList<>(); // cards stolen by the current action, to be displayed as
+                                                        // choices
     Button playActionButton = new Button(App.gameWidth / 2 - 80, Y_START - 50, 80, drawButtonHeight, "Play Action");
     Button bankActionButton = new Button(App.gameWidth / 2 + 10, Y_START - 50, 80, drawButtonHeight, "Bank");
     // counts of each property types
-    HashMap<String, Integer> propertyCounts;
+    static HashMap<String, Integer> propertyCounts;
     ClickableRectangle endTurnButton = new ClickableRectangle(buttonsX, Y_START + drawButtonHeight + 15, 80,
             drawButtonHeight, "End");
 
@@ -117,7 +120,6 @@ public class MonopolyDeal extends CardGame {
         // also handle end turn
         if (endTurnButton.isClicked(mouseX, mouseY) && playerOneTurn) {
             switchTurns();
-            playsCount = 0; // reset play count for new turn
             ((Button) drawButton).setDisabled(false); // enable draw button for new turn
         }
     }
@@ -133,7 +135,7 @@ public class MonopolyDeal extends CardGame {
         } else if (card.suit.equals("Property")) {
             ((MonopolyHand) hand).propertyPile.addCard(card);
         } else if (card.suit.equals("Action")) {
-            return true;
+            return true; // handled later in handleActionCards()
         }
         // Remove card from hand
         hand.removeCard(card);
@@ -143,6 +145,9 @@ public class MonopolyDeal extends CardGame {
 
     @Override
     protected boolean isValidPlay(Card card) {
+        if (!playerOneTurn) {
+            return true; // computer can play any card , won't play invalid
+        }
         if (!((Button) drawButton).isDisabled()) {
             System.out.println("You must draw before playing cards!");
             return false;
@@ -150,14 +155,6 @@ public class MonopolyDeal extends CardGame {
         if (playsCount >= 3) {
             System.out.println("You have already played 3 cards this turn!");
             return false;
-        }
-        if (card.suit.equals("Action")) {
-            if (card.value.equals(MonopolyFields.FORCED_DEAL) &&
-                    ((MonopolyHand) getCurrentPlayerHand()).propertyPile.getSize() == 0) {
-                // Sly Deal is only valid if opponent has properties to steal
-                System.out.println("No properties to steal with Forced Deal!");
-                return false;
-            }
         }
         return true;
     }
@@ -168,7 +165,7 @@ public class MonopolyDeal extends CardGame {
         if (choosingAction) {
             if (isValidPlay(selectedCard)) {
                 if (playActionButton.isClicked(mouseX, mouseY)) {
-                    handleActionCards();
+                    handleActionCard((ActionCard)selectedCard);
                 } else if (bankActionButton.isClicked(mouseX, mouseY)) {
                     // add to bank
                     selectedCard.suit = "Money";
@@ -190,16 +187,60 @@ public class MonopolyDeal extends CardGame {
         }
     }
 
-    private void handleActionCards() {
-        ((ActionCard) selectedCard).performAction();
-        getCurrentPlayerHand().removeCard(selectedCard);
+    public void handleActionCard(ActionCard actionCard) {
+        actionCard.performAction();
+        getCurrentPlayerHand().removeCard(actionCard);
         playsCount++;
         positionCards();
     }
 
+    private void addToStolenCards(MonopolyCard opponentCard) {
+        stolenCards.add(opponentCard);
+    }
+
+    private boolean canPlayActionCard(MonopolyCard card) {
+        if (!card.suit.equals("Action")) {
+            return false;
+        }
+        boolean opponentHasProperties = playerOneTurn ? ((MonopolyHand) playerTwoHand).propertyPile.getSize() > 0
+                : ((MonopolyHand) playerOneHand).propertyPile.getSize() > 0;
+        boolean opponentHasMoney = playerOneTurn ? ((MonopolyHand) playerTwoHand).bankPile.getSize() > 0
+                : ((MonopolyHand) playerOneHand).bankPile.getSize() > 0;
+        boolean opponentHasStealableProperties = !(playerOneTurn
+                ? MonopolyComputer.calculateNonSetProperties((MonopolyHand) playerTwoHand).isEmpty()
+                : MonopolyComputer.calculateNonSetProperties((MonopolyHand) playerOneHand).isEmpty());
+        switch (((ActionCard) card).getAction()) {
+            case MonopolyFields.SLY_DEAL:
+                return opponentHasStealableProperties;
+            case MonopolyFields.FORCED_DEAL:
+                boolean youHaveProperties = ((MonopolyHand) getCurrentPlayerHand()).propertyPile.getSize() > 0;
+                // Forced Deal is only valid if opponent has properties to steal
+                if (!opponentHasStealableProperties) {
+                    System.out.println("No properties to steal with Forced Deal!");
+                    return false;
+                }
+                return youHaveProperties;
+            case MonopolyFields.DEAL_BREAKER:
+                // can only play Deal Breaker if opponent has a complete set to steal
+                return playerOneTurn ? MonopolyComputer.calculateNumSets((MonopolyHand) playerTwoHand) > 0
+                        : MonopolyComputer.calculateNumSets((MonopolyHand) playerOneHand) > 0;
+            case MonopolyFields.DEBT_COLLECTOR, MonopolyFields.BIRTHDAY:
+                // can only play Debt Collector if opponent has money in bank or properties to
+                return opponentHasMoney || opponentHasProperties;
+            default:
+                return true; // other action cards don't have specific play conditions
+        }
+    }
+
     @Override
     public void drawChoices(PApplet sketch) {
+        sketch.push();
         endTurnButton.draw(sketch);
+        // track playCount
+        sketch.textSize(16);
+        sketch.textAlign(sketch.LEFT, sketch.TOP);
+        sketch.text("Plays: " + playsCount + "/3", buttonsX, Y_START + drawButtonHeight * 2.5f);
+        sketch.pop();
         // if playing an action card, draw choices for that action (e.g. which property
         // to steal with sly deal)
         if (choosingAction) {
@@ -209,16 +250,9 @@ public class MonopolyDeal extends CardGame {
             sketch.textSize(16);
             sketch.fill(255);
             sketch.text("Play Action or Bank?", App.gameWidth / 2, Y_START - 80);
+            playActionButton.setDisabled(!canPlayActionCard((MonopolyCard) selectedCard));
             playActionButton.draw(sketch);
             bankActionButton.draw(sketch);
-        } else if (playingAsAction) {
-            // for now just draw a placeholder, but ideally should draw different choices
-            // based on the action card being played
-            sketch.fill(255, 0, 0);
-            sketch.rect(App.gameWidth / 2 - 100, Y_START - 100, 200, 100);
-            sketch.textSize(16);
-            sketch.fill(255);
-            sketch.text("Choose how to play action", App.gameWidth / 2, Y_START - 80);
         }
 
     }
@@ -226,6 +260,7 @@ public class MonopolyDeal extends CardGame {
     @Override
     public void switchTurns() {
         playerOneTurn = !playerOneTurn;
+        playsCount = 0;
     }
 
     private void positionCards() {
@@ -235,9 +270,11 @@ public class MonopolyDeal extends CardGame {
 
     @Override
     public void handleComputerTurn() {
-        // TODO: implement actual computer logic
         drawCard(playerTwoHand);
         drawCard(playerTwoHand);
+        while (playsCount < 3 && MonopolyComputer.playCard(this)) {
+            // Keep playing cards until 3 have been played or no more cards can be played
+        }
         positionCards();
         switchTurns();
     }
