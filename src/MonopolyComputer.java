@@ -184,4 +184,31 @@ class MonopolyComputer {
         }
         return bestCard;
     }
+
+    public static List<MonopolyCard> selectCardsToGiveUp(MonopolyHand hand, int amountNeeded, List<MonopolyCard> stolenCards) {
+        int totalValue = 0;
+
+        // First, try to pay with money from bank
+        List<Card> bankCards = new ArrayList<>(hand.bankPile.getCards());
+        for (Card card : bankCards) {
+            if (totalValue >= amountNeeded)
+                break;
+            int value = Integer.parseInt(card.value);
+            totalValue += value;
+            stolenCards.add((MonopolyCard) card);
+        }
+
+        // If still need more, give up properties (non-set properties first)
+        if (totalValue < amountNeeded) {
+            List<Card> nonSetProperties = calculateNonSetProperties(hand);
+            for (Card card : nonSetProperties) {
+                if (totalValue >= amountNeeded)
+                    break;
+                int value = Integer.parseInt(card.value);
+                totalValue += value;
+                stolenCards.add((MonopolyCard) card);
+            }
+        }
+        return stolenCards;
+    }
 }

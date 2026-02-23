@@ -11,7 +11,7 @@ public class Button extends ClickableRectangle {
         if (isDisabled) {
             app.fill(150);
         } else {
-            app.fill(200);
+            app.fill(0, 255, 122);
         }
         app.rect(x, y, width, height);
         app.fill(0);

@@ -1,3 +1,5 @@
+import java.util.HashMap;
+
 import processing.core.PApplet;
 
 public class MonopolyHand extends Hand {
@@ -36,7 +38,7 @@ public class MonopolyHand extends Hand {
         sketch.strokeWeight(3);
         sketch.rect(x - 10, y + height / 2 - 10, width / 3, height / 2, 10);
         sketch.text("Bank", x, y + height / 2 + 10);
-        bankPile.positionCards(x, y + height/2+10, 80, 120, 20);
+        positionBankPile();
         bankPile.draw(sketch);
 
         // position property pile in a grid away from hand
@@ -49,6 +51,46 @@ public class MonopolyHand extends Hand {
         propertyPile.positionCards(x + width / 3 + 20, y + height / 2 + 10, 80, 120, 60);
         propertyPile.draw(sketch);
         sketch.pop();
+    }
+
+    private void positionBankPile() {
+        int cardW = 40;
+        int cardH = 60;
+        int colGap = 10;
+        int rowGap = 20;
+        int gridX = x;
+        int gridY = y + height / 2 + 10;
+
+        HashMap<String, int[]> valueSlots = new HashMap<>();
+        valueSlots.put("10", new int[] { 0, 0 });
+        valueSlots.put("5", new int[] { 1, 0 });
+        valueSlots.put("4", new int[] { 2, 0 });
+        valueSlots.put("3", new int[] { 0, 1 });
+        valueSlots.put("2", new int[] { 1, 1 });
+        valueSlots.put("1", new int[] { 2, 1 });
+
+        HashMap<String, Integer> valueStackCounts = new HashMap<>();
+        for (Card card : bankPile.getCards()) {
+            int[] slot = valueSlots.getOrDefault(card.value, new int[] { 0, 1 });
+            int stackIndex = valueStackCounts.getOrDefault(card.value, 0);
+            int cardX = gridX + slot[0] * (cardW + colGap) + stackIndex * 4;
+            int cardY = gridY + slot[1] * (cardH + rowGap) - stackIndex * 4;
+            card.setPosition(cardX, cardY, cardW, cardH);
+            card.setSize(cardW, cardH);
+            valueStackCounts.put(card.value, stackIndex + 1);
+        }
+    }
+
+    public void clearGlowingCards() {
+        for (Card card : getCards()) {
+            ((MonopolyCard) card).glowing = false;
+        }
+        for (Card card : bankPile.getCards()) {
+            ((MonopolyCard) card).glowing = false;
+        }
+        for (Card card : propertyPile.getCards()) {
+            ((MonopolyCard) card).glowing = false;
+        }
     }
 
     public int getMoney() {
