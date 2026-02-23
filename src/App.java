@@ -3,7 +3,7 @@ import processing.core.PApplet;
 public class App extends PApplet {
 
     CardGame cardGame = new MonopolyDeal();
-    int gameWidth = 1000;
+    static int gameWidth = 1000;
     private int timer;
 
     public static void main(String[] args) {

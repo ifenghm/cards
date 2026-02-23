@@ -5,7 +5,6 @@ import processing.core.PApplet;
 public class MonopolyDeal extends CardGame {
     // i need to be able to steal sets rather than just one property card
     // so we need to be able to select a "set" based on the selected card.
-
     static final int HAND_SPACING = 80;
     static final int X_START = 30;
     static final int Y_START = 650;
@@ -13,12 +12,16 @@ public class MonopolyDeal extends CardGame {
 
     int playsCount = 0; // keeps track of the number of plays by the current player
 
+    boolean choosingAction = false; // whether the player is currently choosing which action to play
+    boolean playingAsAction = false; // whether the player is currently choosing how to play an action card
+    Button playActionButton = new Button(App.gameWidth / 2 - 80, Y_START - 50, 80, drawButtonHeight, "Play Action");
+    Button bankActionButton = new Button(App.gameWidth / 2 + 10, Y_START - 50, 80, drawButtonHeight, "Bank");
     // counts of each property types
     HashMap<String, Integer> propertyCounts;
     ClickableRectangle endTurnButton = new ClickableRectangle(buttonsX, Y_START + drawButtonHeight + 15, 80,
             drawButtonHeight, "End");
-    
-    // action 
+
+    // action
 
     MonopolyDeal() {
 
@@ -28,8 +31,7 @@ public class MonopolyDeal extends CardGame {
         playerTwoHand = new MonopolyHand(2);
         dealCards(5);
         // position cards
-        playerOneHand.positionCards(X_START, Y_START, HAND_SPACING, 120, HAND_SPACING);
-        playerTwoHand.positionCards(X_START, 30, HAND_SPACING, 120, HAND_SPACING);
+        positionCards();
     }
 
     public Hand getCurrentPlayerHand() {
@@ -59,7 +61,8 @@ public class MonopolyDeal extends CardGame {
         propertyCounts.put(MonopolyFields.BROWN, 2);
         propertyCounts.put(MonopolyFields.UTILITY, 2);
         propertyCounts.put(MonopolyFields.RAILROAD, 4);
-        String[] properties = { MonopolyFields.GREEN, MonopolyFields.RED, MonopolyFields.ORANGE, MonopolyFields.LIGHT_BLUE,
+        String[] properties = { MonopolyFields.GREEN, MonopolyFields.RED, MonopolyFields.ORANGE,
+                MonopolyFields.LIGHT_BLUE,
                 MonopolyFields.PINK, MonopolyFields.YELLOW };
         for (String prop : properties) {
             propertyCounts.put(prop, 3);
@@ -88,7 +91,8 @@ public class MonopolyDeal extends CardGame {
         }
         // Add action cards (simplified, not all actions)
         String[] actions = { MonopolyFields.PASS_GO, MonopolyFields.DEAL_BREAKER, MonopolyFields.JUST_SAY_NO,
-                MonopolyFields.SLY_DEAL, MonopolyFields.FORCED_DEAL, MonopolyFields.DEBT_COLLECTOR, MonopolyFields.BIRTHDAY };
+                MonopolyFields.SLY_DEAL, MonopolyFields.FORCED_DEAL, MonopolyFields.DEBT_COLLECTOR,
+                MonopolyFields.BIRTHDAY };
         String[] actionValues = { "1", "5", "4", "3", "3", "3", "2" };
         int[] actionCounts = { 10, 2, 3, 3, 3, 3, 3 }; // number of each action card
         for (int i = 0; i < actions.length; i++) {
@@ -108,8 +112,7 @@ public class MonopolyDeal extends CardGame {
             drawCard(playerOneHand);
             drawCard(playerOneHand);
             ((Button) drawButton).setDisabled(true); // disable draw button after drawing
-            playerOneHand.positionCards(X_START, Y_START, HAND_SPACING, 120, HAND_SPACING);
-            playerTwoHand.positionCards(X_START, 30, HAND_SPACING, 120, HAND_SPACING);
+            positionCards();
         }
         // also handle end turn
         if (endTurnButton.isClicked(mouseX, mouseY) && playerOneTurn) {
@@ -129,6 +132,8 @@ public class MonopolyDeal extends CardGame {
             ((MonopolyHand) hand).bankPile.addCard(card);
         } else if (card.suit.equals("Property")) {
             ((MonopolyHand) hand).propertyPile.addCard(card);
+        } else if (card.suit.equals("Action")) {
+            return true;
         }
         // Remove card from hand
         hand.removeCard(card);
@@ -159,12 +164,63 @@ public class MonopolyDeal extends CardGame {
 
     @Override
     public void handleCardClick(int mouseX, int mouseY) {
+        // Handle action card choices first if we're already choosing
+        if (choosingAction) {
+            if (isValidPlay(selectedCard)) {
+                if (playActionButton.isClicked(mouseX, mouseY)) {
+                    handleActionCards();
+                } else if (bankActionButton.isClicked(mouseX, mouseY)) {
+                    // add to bank
+                    selectedCard.suit = "Money";
+                    playCard(selectedCard, getCurrentPlayerHand());
+                }
+            }
+            choosingAction = false;
+            selectedCard.setSelected(false, selectedCardRaiseAmount);
+            selectedCard = null;
+            return;
+        }
+
+        // Use parent's selection logic of playing other cards
         super.handleCardClick(mouseX, mouseY);
+
+        // If an action card was just selected, draw action choices
+        if (selectedCard != null && selectedCard.suit.equals("Action")) {
+            choosingAction = true;
+        }
+    }
+
+    private void handleActionCards() {
+        ((ActionCard) selectedCard).performAction();
+        getCurrentPlayerHand().removeCard(selectedCard);
+        playsCount++;
+        positionCards();
     }
 
     @Override
     public void drawChoices(PApplet sketch) {
         endTurnButton.draw(sketch);
+        // if playing an action card, draw choices for that action (e.g. which property
+        // to steal with sly deal)
+        if (choosingAction) {
+            sketch.fill(255, 0, 0);
+            // put it in the middle of the screen
+            sketch.rect(App.gameWidth / 2 - 100, Y_START - 100, 200, 100);
+            sketch.textSize(16);
+            sketch.fill(255);
+            sketch.text("Play Action or Bank?", App.gameWidth / 2, Y_START - 80);
+            playActionButton.draw(sketch);
+            bankActionButton.draw(sketch);
+        } else if (playingAsAction) {
+            // for now just draw a placeholder, but ideally should draw different choices
+            // based on the action card being played
+            sketch.fill(255, 0, 0);
+            sketch.rect(App.gameWidth / 2 - 100, Y_START - 100, 200, 100);
+            sketch.textSize(16);
+            sketch.fill(255);
+            sketch.text("Choose how to play action", App.gameWidth / 2, Y_START - 80);
+        }
+
     }
 
     @Override
@@ -172,13 +228,17 @@ public class MonopolyDeal extends CardGame {
         playerOneTurn = !playerOneTurn;
     }
 
+    private void positionCards() {
+        playerOneHand.positionCards(X_START, Y_START, HAND_SPACING, 120, HAND_SPACING);
+        playerTwoHand.positionCards(X_START, 30, HAND_SPACING, 120, HAND_SPACING);
+    }
+
     @Override
     public void handleComputerTurn() {
         // TODO: implement actual computer logic
         drawCard(playerTwoHand);
         drawCard(playerTwoHand);
-        playerOneHand.positionCards(X_START, Y_START, HAND_SPACING, 120, HAND_SPACING);
-        playerTwoHand.positionCards(X_START, 30, HAND_SPACING, 120, HAND_SPACING);
+        positionCards();
         switchTurns();
     }
 }

@@ -136,11 +136,11 @@ class ActionCard extends MonopolyCard {
     }
 
     public void performAction() {
-        if (MonopolyFields.PASS_GO.equals(value)) {
+        if (MonopolyFields.PASS_GO.equals(action)) {
             // get 2 extra cards in hand
             game.getCurrentPlayerHand().addCard(game.deck.remove(0));
             game.getCurrentPlayerHand().addCard(game.deck.remove(0));
-        } else if (MonopolyFields.SLY_DEAL.equals(value)) {
+        } else if (MonopolyFields.SLY_DEAL.equals(action)) {
             // steal a property from opponent
             ((MonopolyHand) game.getCurrentPlayerHand()).propertyPile.addCard(game.selectedCard);
             if (game.playerOneTurn) {
@@ -148,20 +148,23 @@ class ActionCard extends MonopolyCard {
             } else {
                 ((MonopolyHand) game.playerOneHand).propertyPile.removeCard(game.selectedCard);
             }
-        } else if (MonopolyFields.DEAL_BREAKER.equals(value)) {
+        } else if (MonopolyFields.DEAL_BREAKER.equals(action)) {
             // steal a complete set from opponent
 
-        } else if (MonopolyFields.JUST_SAY_NO.equals(value)) {
+        } else if (MonopolyFields.JUST_SAY_NO.equals(action)) {
             // cancel an opponent's action
 
-        } else if (MonopolyFields.DEBT_COLLECTOR.equals(value)) {
+        } else if (MonopolyFields.DEBT_COLLECTOR.equals(action)) {
             // force opponent to pay you $5
             // this is actually tricky, the computer needs to wait for the user to finish
             // paying
-            // and we have to program the computer to make decisions
-        } else if (MonopolyFields.BIRTHDAY.equals(value)) {
+            // and we have to program the computer to give money
+        } else if (MonopolyFields.BIRTHDAY.equals(action)) {
             // force opponent to pay you $2
         }
+        
+        // Remove the action card from player's hand after performing action
+        game.playCard(this, game.getCurrentPlayerHand());
     }
 }
 
