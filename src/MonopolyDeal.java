@@ -5,39 +5,25 @@ import processing.core.PApplet;
 public class MonopolyDeal extends CardGame {
     // i need to be able to steal sets rather than just one property card
     // so we need to be able to select a "set" based on the selected card.
-    static final String RAILROAD = "Railroad";
-    static final String UTILITY = "Utility";
-    static final String BROWN = "Brown";
-    static final String LIGHT_BLUE = "Light Blue";
-    static final String PINK = "Pink";
-    static final String ORANGE = "Orange";
-    static final String YELLOW = "Yellow";
-    static final String RED = "Red";
-    static final String GREEN = "Green";
-    static final String BLUE = "Blue";
-    static final String PASS_GO = "Pass Go";
-    static final String SLY_DEAL = "Sly Deal";
-    static final String DEAL_BREAKER = "Deal Breaker";
-    static final String JUST_SAY_NO = "Just Say No";
-    static final String DEBT_COLLECTOR = "Debt Collector";
-    static final String BIRTHDAY = "It's My Birthday";
 
     static final int HAND_SPACING = 80;
     static final int X_START = 30;
     static final int Y_START = 650;
+    static final int buttonsX = 700;
 
     int playsCount = 0; // keeps track of the number of plays by the current player
 
     // counts of each property types
     HashMap<String, Integer> propertyCounts;
-    static final int buttonsX = 700;
     ClickableRectangle endTurnButton = new ClickableRectangle(buttonsX, Y_START + drawButtonHeight + 15, 80,
             drawButtonHeight, "End");
+    
+    // action 
 
     MonopolyDeal() {
 
         initializeGame();
-        drawButton = new ClickableRectangle(buttonsX, Y_START, 80, drawButtonHeight, "Draw");
+        drawButton = new Button(buttonsX, Y_START, 80, drawButtonHeight, "Draw");
         playerOneHand = new MonopolyHand(1);
         playerTwoHand = new MonopolyHand(2);
         dealCards(5);
@@ -69,40 +55,42 @@ public class MonopolyDeal extends CardGame {
         }
         // Add property cards (simplified, not all properties or colors)
         propertyCounts = new HashMap<>();
-        propertyCounts.put(BLUE, 2);
-        propertyCounts.put(BROWN, 2);
-        propertyCounts.put(UTILITY, 2);
-        propertyCounts.put(RAILROAD, 4);
-        String[] properties = { GREEN, RED, ORANGE, LIGHT_BLUE, PINK, YELLOW };
+        propertyCounts.put(MonopolyFields.BLUE, 2);
+        propertyCounts.put(MonopolyFields.BROWN, 2);
+        propertyCounts.put(MonopolyFields.UTILITY, 2);
+        propertyCounts.put(MonopolyFields.RAILROAD, 4);
+        String[] properties = { MonopolyFields.GREEN, MonopolyFields.RED, MonopolyFields.ORANGE, MonopolyFields.LIGHT_BLUE,
+                MonopolyFields.PINK, MonopolyFields.YELLOW };
         for (String prop : properties) {
             propertyCounts.put(prop, 3);
         }
         HashMap<String, Integer> propertyRents = new HashMap<>();
-        propertyRents.put(UTILITY, 1);
-        propertyRents.put(RAILROAD, 1);
-        propertyRents.put(LIGHT_BLUE, 1);
-        propertyRents.put(BROWN, 1);
-        propertyRents.put(ORANGE, 2);
-        propertyRents.put(PINK, 2);
-        propertyRents.put(YELLOW, 2);
-        propertyRents.put(RED, 3);
-        propertyRents.put(GREEN, 3);
-        propertyRents.put(BLUE, 4);
-
+        propertyRents.put(MonopolyFields.UTILITY, 1);
+        propertyRents.put(MonopolyFields.RAILROAD, 1);
+        propertyRents.put(MonopolyFields.LIGHT_BLUE, 1);
+        propertyRents.put(MonopolyFields.BROWN, 1);
+        propertyRents.put(MonopolyFields.ORANGE, 2);
+        propertyRents.put(MonopolyFields.PINK, 2);
+        propertyRents.put(MonopolyFields.YELLOW, 2);
+        propertyRents.put(MonopolyFields.RED, 3);
+        propertyRents.put(MonopolyFields.GREEN, 3);
+        propertyRents.put(MonopolyFields.BLUE, 4);
         for (String prop : propertyCounts.keySet()) {
             int count = propertyCounts.get(prop);
             for (int i = 0; i < count; i++) {
                 // the selling value seem arbitrary, but the utilities are worth a bit more
                 deck.get(i).setClickableWidth(deck.get(i).width);
                 deck.add(new PropertyCard(
-                        String.valueOf(prop == UTILITY || prop == RAILROAD ? 2 : propertyRents.get(prop)),
+                        String.valueOf(prop == MonopolyFields.UTILITY || prop == MonopolyFields.RAILROAD ? 2
+                                : propertyRents.get(prop)),
                         propertyRents.get(prop), prop));
             }
         }
         // Add action cards (simplified, not all actions)
-        String[] actions = { PASS_GO, DEAL_BREAKER, JUST_SAY_NO, SLY_DEAL, DEBT_COLLECTOR, BIRTHDAY };
-        String[] actionValues = { "1", "5", "3", "4", "3", "2" };
-        int[] actionCounts = { 10, 2, 3, 3, 3, 3 }; // number of each action card
+        String[] actions = { MonopolyFields.PASS_GO, MonopolyFields.DEAL_BREAKER, MonopolyFields.JUST_SAY_NO,
+                MonopolyFields.SLY_DEAL, MonopolyFields.FORCED_DEAL, MonopolyFields.DEBT_COLLECTOR, MonopolyFields.BIRTHDAY };
+        String[] actionValues = { "1", "5", "4", "3", "3", "3", "2" };
+        int[] actionCounts = { 10, 2, 3, 3, 3, 3, 3 }; // number of each action card
         for (int i = 0; i < actions.length; i++) {
             for (int j = 0; j < actionCounts[i]; j++) {
                 deck.add(new ActionCard(actionValues[i], actions[i], this));
@@ -119,6 +107,7 @@ public class MonopolyDeal extends CardGame {
         if (drawButton.isClicked(mouseX, mouseY) && playerOneTurn) {
             drawCard(playerOneHand);
             drawCard(playerOneHand);
+            ((Button) drawButton).setDisabled(true); // disable draw button after drawing
             playerOneHand.positionCards(X_START, Y_START, HAND_SPACING, 120, HAND_SPACING);
             playerTwoHand.positionCards(X_START, 30, HAND_SPACING, 120, HAND_SPACING);
         }
@@ -126,11 +115,15 @@ public class MonopolyDeal extends CardGame {
         if (endTurnButton.isClicked(mouseX, mouseY) && playerOneTurn) {
             switchTurns();
             playsCount = 0; // reset play count for new turn
+            ((Button) drawButton).setDisabled(false); // enable draw button for new turn
         }
     }
 
-    @Override 
+    @Override
     public boolean playCard(Card card, Hand hand) {
+        if (!isValidPlay(card)) {
+            return false;
+        }
         // If Money card, add to bank pile
         if (card.suit.equals("Money")) {
             ((MonopolyHand) hand).bankPile.addCard(card);
@@ -141,6 +134,32 @@ public class MonopolyDeal extends CardGame {
         hand.removeCard(card);
         playsCount++;
         return true;
+    }
+
+    @Override
+    protected boolean isValidPlay(Card card) {
+        if (!((Button) drawButton).isDisabled()) {
+            System.out.println("You must draw before playing cards!");
+            return false;
+        }
+        if (playsCount >= 3) {
+            System.out.println("You have already played 3 cards this turn!");
+            return false;
+        }
+        if (card.suit.equals("Action")) {
+            if (card.value.equals(MonopolyFields.FORCED_DEAL) &&
+                    ((MonopolyHand) getCurrentPlayerHand()).propertyPile.getSize() == 0) {
+                // Sly Deal is only valid if opponent has properties to steal
+                System.out.println("No properties to steal with Forced Deal!");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public void handleCardClick(int mouseX, int mouseY) {
+        super.handleCardClick(mouseX, mouseY);
     }
 
     @Override

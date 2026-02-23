@@ -5,7 +5,7 @@ public class MonopolyHand extends Hand {
     Hand bankPile = new Hand(); // display in row
     Hand propertyPile = new Hand(); // display in grid
     int playerNum, x, y;
-    int width = 750;
+    int width = 900;
     int height = 300;
 
     MonopolyHand(int playerNum) {

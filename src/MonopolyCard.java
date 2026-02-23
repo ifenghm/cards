@@ -1,7 +1,6 @@
 import processing.core.PApplet;
 
 public class MonopolyCard extends Card {
-
     // all monopoly cards are money cards, so we can just return the value as an int
     public MonopolyCard(String value, String suit) {
         super(value, suit);
@@ -137,11 +136,11 @@ class ActionCard extends MonopolyCard {
     }
 
     public void performAction() {
-        if ("Pass Go".equals(value)) {
+        if (MonopolyFields.PASS_GO.equals(value)) {
             // get 2 extra cards in hand
             game.getCurrentPlayerHand().addCard(game.deck.remove(0));
             game.getCurrentPlayerHand().addCard(game.deck.remove(0));
-        } else if ("Sly Deal".equals(value)) {
+        } else if (MonopolyFields.SLY_DEAL.equals(value)) {
             // steal a property from opponent
             ((MonopolyHand) game.getCurrentPlayerHand()).propertyPile.addCard(game.selectedCard);
             if (game.playerOneTurn) {
@@ -149,19 +148,46 @@ class ActionCard extends MonopolyCard {
             } else {
                 ((MonopolyHand) game.playerOneHand).propertyPile.removeCard(game.selectedCard);
             }
-        } else if ("Deal Breaker".equals(value)) {
+        } else if (MonopolyFields.DEAL_BREAKER.equals(value)) {
             // steal a complete set from opponent
 
-        } else if ("Just Say No".equals(value)) {
+        } else if (MonopolyFields.JUST_SAY_NO.equals(value)) {
             // cancel an opponent's action
 
-        } else if ("Debt Collector".equals(value)) {
+        } else if (MonopolyFields.DEBT_COLLECTOR.equals(value)) {
             // force opponent to pay you $5
             // this is actually tricky, the computer needs to wait for the user to finish
             // paying
             // and we have to program the computer to make decisions
-        } else if ("It's My Birthday".equals(value)) {
+        } else if (MonopolyFields.BIRTHDAY.equals(value)) {
             // force opponent to pay you $2
         }
+    }
+}
+
+class RentCard extends MonopolyCard {
+    // rent cards have a color and a rent value that depends on how many properties of
+    // that color the opponent has
+    String[] colors; // usually 2
+    int rentWithOneProperty;
+    int rentWithTwoProperties;
+
+    public RentCard(String value, String color1, String color2) {
+        super(value, "Rent");
+        this.colors = new String[] { color1, color2 };
+    }
+
+    public RentCard(String value) {
+        super(value, "Rent");
+        // wild rent card
+        // this.colors = 
+    }
+
+    @Override
+    public void drawFront(PApplet sketch) {
+        super.drawFront(sketch);
+        sketch.textSize(20);
+        sketch.textAlign(sketch.LEFT, sketch.CENTER);
+        sketch.text("rent: " + colors[0] + ", " + colors[1], x, y + height / 2 + 16);
     }
 }
