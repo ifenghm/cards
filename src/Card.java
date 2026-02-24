@@ -95,4 +95,8 @@ public class Card extends ClickableRectangle {
         drawFront(sketch);
         sketch.strokeWeight(1);
     }
+
+    public String toString() {
+        return value + " of " + suit;
+    }
 }

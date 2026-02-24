@@ -46,6 +46,7 @@ public class Hand {
             int x = startX + (col * spacing);
             int y = startY + (row * spacing);
             cards.get(i).setPosition(x, y, cardWidth, cardHeight);
+            cards.get(i).setClickableWidth(cardWidth);
         }
     }
 

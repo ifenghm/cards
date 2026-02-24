@@ -29,8 +29,19 @@ public class MonopolyDeal extends CardGame {
             drawButtonHeight, "End");
 
     MonopolyDeal() {
-
         initializeGame();
+    }
+
+    @Override
+    protected void initializeGame() {
+        super.initializeGame();
+        // initialize all the state variables that won't be reset in the constructor
+        playsCount = 0;
+        stolenCards = new ArrayList<>();
+        actionCardBeingPlayed = null;
+        tradeProperty = null;
+        isStealing = false;
+        neededMoneyFromOpponent = 0;
         drawButton = new Button(buttonsX, Y_START, 80, drawButtonHeight, "Draw");
         playerOneHand = new MonopolyHand(1);
         playerTwoHand = new MonopolyHand(2);
@@ -41,6 +52,14 @@ public class MonopolyDeal extends CardGame {
 
     public Hand getCurrentPlayerHand() {
         return playerOneTurn ? playerOneHand : playerTwoHand;
+    }
+
+    MonopolyHand currentHand() {
+        return (MonopolyHand) getCurrentPlayerHand();
+    }
+
+    MonopolyHand opponentHand() {
+        return playerOneTurn ? (MonopolyHand) playerTwoHand : (MonopolyHand) playerOneHand;
     }
 
     @Override
@@ -94,17 +113,21 @@ public class MonopolyDeal extends CardGame {
                         propertyRents.get(prop), prop));
             }
         }
-        // Add action cards (simplified, not all actions)
-        String[] actions = { MonopolyFields.PASS_GO, MonopolyFields.DEAL_BREAKER, MonopolyFields.JUST_SAY_NO,
-                MonopolyFields.SLY_DEAL, MonopolyFields.FORCED_DEAL, MonopolyFields.DEBT_COLLECTOR,
-                MonopolyFields.BIRTHDAY };
-        String[] actionValues = { "1", "5", "4", "3", "3", "3", "2" };
-        int[] actionCounts = { 10, 2, 3, 3, 3, 3, 3 }; // number of each action card
-        for (int i = 0; i < actions.length; i++) {
-            for (int j = 0; j < actionCounts[i]; j++) {
-                deck.add(new ActionCard(actionValues[i], actions[i], this));
-            }
-        }
+        // Add action cards using specific subclasses for polymorphism
+        for (int i = 0; i < 10; i++)
+            deck.add(new PassGoCard("1", this));
+        for (int i = 0; i < 2; i++)
+            deck.add(new DealBreakerCard("5", this));
+        for (int i = 0; i < 3; i++)
+            deck.add(new JustSayNoCard("4", this));
+        for (int i = 0; i < 3; i++)
+            deck.add(new SlyDealCard("3", this));
+        for (int i = 0; i < 3; i++)
+            deck.add(new ForcedDealCard("3", this));
+        for (int i = 0; i < 3; i++)
+            deck.add(new PaymentCard("3", MonopolyFields.DEBT_COLLECTOR, 5, this));
+        for (int i = 0; i < 3; i++)
+            deck.add(new PaymentCard("2", MonopolyFields.BIRTHDAY, 2, this));
 
         for (Card card : deck) {
             card.setClickableWidth(80); // set clickable width for all cards
@@ -166,73 +189,37 @@ public class MonopolyDeal extends CardGame {
     }
 
     private Card handleStealingChoice(Card clickedCard) {
-        if (clickedCard == null || !((MonopolyCard) clickedCard).glowing) {
-            return null; // Ignore clicks on non-glowing cards or empty space
+        if (clickedCard == null) {
+            // change to cancel
+            return null;
         }
 
-        // Add the clicked card or set to stolen cards
-        if (actionCardBeingPlayed.getAction().equals(MonopolyFields.FORCED_DEAL)) {
-            MonopolyHand currentHand = (MonopolyHand) getCurrentPlayerHand();
-            MonopolyHand opponentHand = playerOneTurn ? (MonopolyHand) playerTwoHand : (MonopolyHand) playerOneHand;
-            // Select opponent property to steal
-            if (stolenCards.isEmpty() && opponentHand.propertyPile.getCards().contains(clickedCard)) {
-                stolenCards.add((MonopolyCard) clickedCard);
-            }
-            // Select property to trade from current player
-            if (currentHand.propertyPile.getCards().contains(clickedCard)) {
-                tradeProperty = (PropertyCard) clickedCard;
-            }
-            // If both selected, proceed
-            if (!stolenCards.isEmpty() && tradeProperty != null) {
-                ((MonopolyHand) playerOneHand).clearGlowingCards();
-                ((MonopolyHand) playerTwoHand).clearGlowingCards();
-                handleActionCard(actionCardBeingPlayed);
-                actionCardBeingPlayed = null;
-                isStealing = false;
-            }
-            // we return early for forced deals executed by the player to make sure we have both cards chosen
-            return clickedCard;
-        } else if (actionCardBeingPlayed.getAction().equals(MonopolyFields.DEAL_BREAKER)) {
-            // If it's a Deal Breaker, add the whole set of the clicked card
-            String colorToSteal = ((PropertyCard) clickedCard).color;
-            MonopolyHand opponentHand = playerOneTurn ? (MonopolyHand) playerTwoHand : (MonopolyHand) playerOneHand;
-            for (Card card : opponentHand.propertyPile.getCards()) {
-                if (((PropertyCard) card).color.equals(colorToSteal)) {
-                    addToStolenCards((MonopolyCard) card);
-                }
-            }
-        } else {
-            stolenCards.add((MonopolyCard) clickedCard);
-        }
         if (playerOneTurn) {
-            // Player is stealing from computer (Sly Deal, etc.)
-            isStealing = false;
-            ((MonopolyHand) playerOneHand).clearGlowingCards();
-            ((MonopolyHand) playerTwoHand).clearGlowingCards();
-            handleActionCard((ActionCard) actionCardBeingPlayed);
-            actionCardBeingPlayed = null;
+            // Player is selecting cards to steal
+            boolean done = actionCardBeingPlayed.handleStealingChoice(clickedCard);
+            System.out.println("handleStealingChoice result: done=" + done
+                    + " | tradeProperty=" + (tradeProperty != null ? tradeProperty.color : "null")
+                    + " | stolenCards=" + (stolenCards.isEmpty() ? "empty" : stolenCards.getFirst()));
+            if (done) {
+                finishStealingAction();
+            }
+
         } else {
             // Computer is collecting from player (Debt Collector, Birthday)
+            stolenCards.add((MonopolyCard) clickedCard);
             System.out.println("Selected card to give up: " + clickedCard.value + " of " + clickedCard.suit);
             int cardValue = Integer.parseInt(clickedCard.value);
             neededMoneyFromOpponent -= cardValue;
 
-            // Check if player has paid enough or they are broke (no more cards to give)
-            MonopolyHand opponentHand = playerOneTurn ? (MonopolyHand) playerTwoHand : (MonopolyHand) playerOneHand;
+            // Transfer card immediately so player sees it leave
+            transferCards(stolenCards, opponentHand(), currentHand());
 
-            // also check if the opponentHand is empty after this card is selected as
-            // payment, in which case they are broke and the action can be resolved
-            ArrayList<Card> remainingWealth = new ArrayList<>(opponentHand.bankPile.getCards());
-            remainingWealth.addAll(opponentHand.propertyPile.getCards());
-            remainingWealth.removeAll(stolenCards);
+            // Check if player has paid enough or they are broke
+            ArrayList<Card> remainingWealth = new ArrayList<>(opponentHand().bankPile.getCards());
+            remainingWealth.addAll(opponentHand().propertyPile.getCards());
 
             if (neededMoneyFromOpponent <= 0 || remainingWealth.isEmpty()) {
-                isStealing = false;
-                ((MonopolyHand) playerOneHand).clearGlowingCards();
-                ((MonopolyHand) playerTwoHand).clearGlowingCards();
-                handleActionCard((ActionCard) actionCardBeingPlayed);
-                actionCardBeingPlayed = null;
-                neededMoneyFromOpponent = 0;
+                finishStealingAction();
             }
         }
         return clickedCard;
@@ -277,93 +264,72 @@ public class MonopolyDeal extends CardGame {
         }
     }
 
+    // called once card is selected, and after any required stolenCards are selected
     public void handleActionCard(ActionCard actionCard) {
         String action = actionCard.getAction();
         System.out.println("Starting action card: " + action);
-        boolean isDebtOrBirthday = MonopolyFields.DEBT_COLLECTOR.equals(action)
-                || MonopolyFields.BIRTHDAY.equals(action);
+        boolean isPayment = actionCard instanceof PaymentCard;
 
-        // For Debt Collector and Birthday, check if we need player to select cards to
-        // pay
-        if (isDebtOrBirthday && !playerOneTurn && stolenCards.isEmpty()) {
-            // Computer is playing on player - player needs to choose cards to pay
-            isStealing = true;
-            actionCardBeingPlayed = actionCard;
-            setGlowingCardsForAction(actionCard);
-            return;
+        // For action cards that require stealing, if no cards have been selected yet,
+        // set up the stealing state
+        if (actionCard.requiresStealingChoice() && stolenCards.isEmpty()) {
+            if (isPayment && playerOneTurn) {
+                // Player plays debt/birthday on computer — computer auto-selects
+                int amount = ((PaymentCard) actionCard).amount;
+                MonopolyComputer.selectCardsToGiveUp(opponentHand(), amount, stolenCards);
+            } else if (playerOneTurn || isPayment) {
+                // Player needs to choose cards to steal, or computer plays debt/birthday on
+                // player
+                isStealing = true;
+                actionCardBeingPlayed = actionCard;
+                actionCard.setGlowingCards();
+                System.out.println("Waiting for player to select cards for action: " + action);
+                return; // won't finish, waiting
+            }
         }
-
-        // For other stealing actions, check if we need to select what to steal
-        if (actionCard.requiresStealingChoice() && !isDebtOrBirthday && stolenCards.isEmpty()) {
-            isStealing = true; // will trigger stealing choice UI
-            actionCardBeingPlayed = actionCard;
-            setGlowingCardsForAction(actionCard);
-            return;
-        }
-
-        // If player is playing Debt Collector/Birthday on computer, computer
-        // automatically selects cards
-        if (isDebtOrBirthday && playerOneTurn && stolenCards.isEmpty()) {
-            MonopolyHand opponentHand = (MonopolyHand) playerTwoHand;
-            int amount = MonopolyFields.DEBT_COLLECTOR.equals(action) ? 5 : 2;
-            MonopolyComputer.selectCardsToGiveUp(opponentHand, amount, stolenCards);
-        }
-
         // assuming all choices have been made at this point and isStealing is false
-
         System.out.println("Finishing action card: " + action);
+        performActionCard(actionCard);
+        checkWinCondition();
+    }
+
+    private void finishStealingAction() {
+        isStealing = false;
+        currentHand().clearGlowingCards();
+        opponentHand().clearGlowingCards();
+        handleActionCard(actionCardBeingPlayed);
+        actionCardBeingPlayed = null;
+        neededMoneyFromOpponent = 0;
+    }
+
+    public void performActionCard(ActionCard actionCard) {
         actionCard.performAction();
-        getCurrentPlayerHand().removeCard(actionCard);
+
+        // Clear stolen cards state
+        for (MonopolyCard c : stolenCards) {
+            c.setSelected(false, 0);
+        }
+        stolenCards.clear();
+
+        // Remove the action card from player's hand
+        currentHand().removeCard(actionCard);
         choosingAction = false;
         playsCount++;
-        ((MonopolyHand) playerOneHand).clearGlowingCards();
-        ((MonopolyHand) playerTwoHand).clearGlowingCards();
+        currentHand().clearGlowingCards();
+        opponentHand().clearGlowingCards();
         positionCards();
     }
 
-    private void setGlowingCardsForAction(ActionCard actionCard) {
-
-        MonopolyHand opponentHand = playerOneTurn ? (MonopolyHand) playerTwoHand : (MonopolyHand) playerOneHand;
-        String action = actionCard.getAction();
-
-        if (MonopolyFields.SLY_DEAL.equals(action)) {
-            // Glow non-set properties from opponent
-            for (Card card : MonopolyComputer.calculateNonSetProperties(opponentHand)) {
-                ((MonopolyCard) card).glowing = true;
+    void transferCards(List<MonopolyCard> cards, MonopolyHand fromHand, MonopolyHand toHand) {
+        for (MonopolyCard card : cards) {
+            if (card instanceof PropertyCard) {
+                fromHand.propertyPile.removeCard(card);
+                toHand.propertyPile.addCard(card);
+            } else {
+                fromHand.bankPile.removeCard(card);
+                toHand.bankPile.addCard(card);
             }
-        } else if (MonopolyFields.FORCED_DEAL.equals(action)) {
-            // Glow non-set properties from both players
-            for (Card card : MonopolyComputer.calculateNonSetProperties(opponentHand)) {
-                ((MonopolyCard) card).glowing = true;
-            }
-            MonopolyHand currentHand = (MonopolyHand) getCurrentPlayerHand();
-            for (Card card : MonopolyComputer.calculateNonSetProperties(currentHand)) {
-                ((MonopolyCard) card).glowing = true;
-            }
-        } else if (MonopolyFields.DEAL_BREAKER.equals(action)) {
-            // Glow complete sets from opponent
-            for (String color : MonopolyComputer.calculateSets(opponentHand)) {
-                for (Card card : opponentHand.propertyPile.getCards()) {
-                    if (((PropertyCard) card).color.equals(color)) {
-                        ((MonopolyCard) card).glowing = true;
-                    }
-                }
-            }
-        } else if (MonopolyFields.DEBT_COLLECTOR.equals(action) || MonopolyFields.BIRTHDAY.equals(action)) {
-            // Only glow cards if computer is playing on player (player needs to choose what
-            // to give)
-            if (!playerOneTurn) {
-                // Computer is playing on player one - player must choose what to give
-                for (Card card : opponentHand.bankPile.getCards()) {
-                    ((MonopolyCard) card).glowing = true;
-                }
-                for (Card card : opponentHand.propertyPile.getCards()) {
-                    ((MonopolyCard) card).glowing = true;
-                }
-                neededMoneyFromOpponent = MonopolyFields.DEBT_COLLECTOR.equals(action) ? 5 : 2;
-            }
-            // Note: If player is playing on computer, the computer's card selection
-            // is handled in handleActionCard() before performAction() is called
+            positionCards(); // Reposition after each card transfer for visual update
         }
     }
 
@@ -373,65 +339,25 @@ public class MonopolyDeal extends CardGame {
         if (clicked != null)
             return clicked;
 
-        // Check bank piles
-        for (Card card : ((MonopolyHand) playerOneHand).bankPile.getCards()) {
-            if (card.isClicked(mouseX, mouseY))
+        // add bankpilecards
+        ArrayList<Card> allCards = new ArrayList<>();
+        allCards.addAll(currentHand().bankPile.getCards());
+        allCards.addAll(opponentHand().bankPile.getCards());
+        allCards.addAll(currentHand().propertyPile.getCards());
+        allCards.addAll(opponentHand().propertyPile.getCards());
+        for (Card card : allCards) {
+            if (card.isClicked(mouseX, mouseY)) {
                 return card;
+            }
         }
-        for (Card card : ((MonopolyHand) playerTwoHand).bankPile.getCards()) {
-            if (card.isClicked(mouseX, mouseY))
-                return card;
-        }
-
-        // Check property piles
-        for (Card card : ((MonopolyHand) playerOneHand).propertyPile.getCards()) {
-            if (card.isClicked(mouseX, mouseY))
-                return card;
-        }
-        for (Card card : ((MonopolyHand) playerTwoHand).propertyPile.getCards()) {
-            if (card.isClicked(mouseX, mouseY))
-                return card;
-        }
-
         return null;
     }
 
-    private void addToStolenCards(MonopolyCard opponentCard) {
-        stolenCards.add(opponentCard);
-    }
-
     private boolean canPlayActionCard(MonopolyCard card) {
-        if (!card.suit.equals("Action")) {
+        if (!(card instanceof ActionCard)) {
             return false;
         }
-        boolean opponentHasProperties = playerOneTurn ? ((MonopolyHand) playerTwoHand).propertyPile.getSize() > 0
-                : ((MonopolyHand) playerOneHand).propertyPile.getSize() > 0;
-        boolean opponentHasMoney = playerOneTurn ? ((MonopolyHand) playerTwoHand).bankPile.getSize() > 0
-                : ((MonopolyHand) playerOneHand).bankPile.getSize() > 0;
-        boolean opponentHasStealableProperties = !(playerOneTurn
-                ? MonopolyComputer.calculateNonSetProperties((MonopolyHand) playerTwoHand).isEmpty()
-                : MonopolyComputer.calculateNonSetProperties((MonopolyHand) playerOneHand).isEmpty());
-        switch (((ActionCard) card).getAction()) {
-            case MonopolyFields.SLY_DEAL:
-                return opponentHasStealableProperties;
-            case MonopolyFields.FORCED_DEAL:
-                boolean youHaveProperties = ((MonopolyHand) getCurrentPlayerHand()).propertyPile.getSize() > 0;
-                // Forced Deal is only valid if opponent has properties to steal
-                if (!opponentHasStealableProperties) {
-                    System.out.println("No properties to steal with Forced Deal!");
-                    return false;
-                }
-                return youHaveProperties;
-            case MonopolyFields.DEAL_BREAKER:
-                // can only play Deal Breaker if opponent has a complete set to steal
-                return playerOneTurn ? MonopolyComputer.calculateNumSets((MonopolyHand) playerTwoHand) > 0
-                        : MonopolyComputer.calculateNumSets((MonopolyHand) playerOneHand) > 0;
-            case MonopolyFields.DEBT_COLLECTOR, MonopolyFields.BIRTHDAY:
-                // can only play Debt Collector if opponent has money in bank or properties to
-                return opponentHasMoney || opponentHasProperties;
-            default:
-                return true; // other action cards don't have specific play conditions
-        }
+        return ((ActionCard) card).canPlay();
     }
 
     @Override
@@ -469,16 +395,42 @@ public class MonopolyDeal extends CardGame {
             }
         }
 
+        // Tooltip on hover during stealing
+        if (isStealing) {
+            Card hovered = getClickedCardFromAllPiles(sketch.mouseX, sketch.mouseY);
+            if (hovered != null) {
+                String label = "$" + hovered.value + " " + hovered.suit;
+                if (hovered instanceof PropertyCard) {
+                    label = ((PropertyCard) hovered).color + " property ($" + hovered.value + ")";
+                } else if (hovered instanceof ActionCard) {
+                    label = ((ActionCard) hovered).getAction();
+                }
+                sketch.push();
+                sketch.fill(0, 200);
+                float tw = sketch.textWidth(label) + 16;
+                sketch.rect(sketch.mouseX + 10, sketch.mouseY - 25, tw, 24, 4);
+                sketch.fill(255);
+                sketch.textSize(13);
+                sketch.textAlign(sketch.LEFT, sketch.TOP);
+                sketch.text(label, sketch.mouseX + 18, sketch.mouseY - 22);
+                sketch.pop();
+            }
+        }
+
     }
 
     @Override
     public void switchTurns() {
         playerOneTurn = !playerOneTurn;
         playsCount = 0;
-    }
-
-    public boolean isWaitingForPlayerChoice() {
-        return choosingAction || isStealing;
+        // Clear any active states before switching turns
+        choosingAction = false;
+        isStealing = false;
+        actionCardBeingPlayed = null;
+        if (selectedCard != null) {
+            selectedCard.setSelected(false, selectedCardRaiseAmount);
+            selectedCard = null;
+        }
     }
 
     private void positionCards() {
@@ -489,18 +441,32 @@ public class MonopolyDeal extends CardGame {
     @Override
     public void handleComputerTurn() {
         // Don't execute computer turn if player is still making choices
-        if (isWaitingForPlayerChoice()) {
+        if (isStealing) {
             return;
         }
         drawCard(playerTwoHand);
         drawCard(playerTwoHand);
-        while (playsCount < 3 && !isWaitingForPlayerChoice() && MonopolyComputer.playCard(this)) {
+        while (playsCount < 3 && !isStealing && MonopolyComputer.playCard(this)) {
             // Keep playing cards until 3 have been played or no more cards can be played
-            // Also break if we're waiting for player choice
+            // Also break if we're waiting for player choice for a steal
         }
-        if (!isWaitingForPlayerChoice()) {
+        if (!isStealing && gameActive) {
             positionCards();
             switchTurns();
+        }
+    }
+
+    @Override
+    public void checkWinCondition() {
+        int playerOneSets = MonopolyComputer.calculateNumSets(currentHand());
+        int playerTwoSets = MonopolyComputer.calculateNumSets(opponentHand());
+
+        if (playerOneSets >= 3) {
+            System.out.println("Player One wins with " + playerOneSets + " complete sets!");
+            gameActive = false;
+        } else if (playerTwoSets >= 3) {
+            System.out.println("Computer wins with " + playerTwoSets + " complete sets!");
+            gameActive = false;
         }
     }
 }

@@ -50,6 +50,7 @@ public class App extends PApplet {
         }
 
         cardGame.drawChoices(this);
+        cardGame.drawPlayAgain(this);
     }
 
     
@@ -57,6 +58,7 @@ public class App extends PApplet {
     public void mousePressed() {
         cardGame.handleDrawButtonClick(mouseX, mouseY);
         cardGame.handleCardClick(mouseX, mouseY);
+        cardGame.handlePlayAgainClick(mouseX, mouseY);
     }
 
 }

@@ -1,6 +1,3 @@
-import java.util.ArrayList;
-import java.util.List;
-
 import processing.core.PApplet;
 
 public class MonopolyCard extends Card {
@@ -32,7 +29,7 @@ public class MonopolyCard extends Card {
             sketch.scale(scale);
             sketch.translate(-x - width / 2, -y - height / 2);
             scale += dScale;
-            if (scale >= 1.0f + scaleMax || scale <= 1.0f - scaleMax) {
+            if (scale >= 1.0f + scaleMax || scale <= 1.0f) {
                 dScale = -dScale; // reverse direction when reaching max or min scale
             }
         }
@@ -148,8 +145,7 @@ class PropertyCard extends MonopolyCard {
 }
 
 class ActionCard extends MonopolyCard {
-    MonopolyDeal game; // need to affect the game here
-    // action cards have an action type, which is the value field.
+    MonopolyDeal game;
     public String action;
 
     public ActionCard(String value, String action, MonopolyDeal game) {
@@ -158,6 +154,7 @@ class ActionCard extends MonopolyCard {
         this.game = game;
     }
 
+    @Override
     public void drawFront(PApplet sketch) {
         super.drawFront(sketch);
         sketch.textSize(20);
@@ -165,69 +162,196 @@ class ActionCard extends MonopolyCard {
         sketch.text(action, x, y + height / 2 + 16);
     }
 
-    public boolean requiresStealingChoice() {
-        return !(MonopolyFields.PASS_GO.equals(action) || MonopolyFields.JUST_SAY_NO.equals(action));
+    public boolean requiresStealingChoice() { return false; }
+    public String getAction() { return action; }
+    public boolean canPlay() { return true; }
+    public void setGlowingCards() {}
+    public void performAction() {}
+
+    /** Handle a card click during stealing/selection. Returns true when done. */
+    public boolean handleStealingChoice(Card clickedCard) {
+        game.stolenCards.add((MonopolyCard) clickedCard);
+        return true;
+    }
+}
+
+class PassGoCard extends ActionCard {
+    public PassGoCard(String value, MonopolyDeal game) {
+        super(value, MonopolyFields.PASS_GO, game);
     }
 
+    @Override
     public void performAction() {
-        MonopolyHand opponentHand = game.playerOneTurn ? (MonopolyHand) game.playerTwoHand
-                : (MonopolyHand) game.playerOneHand;
-        List<MonopolyCard> stealable = game.stolenCards;
-        // List<MonopolyCard> stealable = new ArrayList<>(game.stolenCards); --- IGNORE
-        // ---
-        if (MonopolyFields.PASS_GO.equals(action)) {
-            // get 2 extra cards in hand
-            game.getCurrentPlayerHand().addCard(game.deck.remove(0));
-            game.getCurrentPlayerHand().addCard(game.deck.remove(0));
-        } else if (MonopolyFields.SLY_DEAL.equals(action)) {
-            // steal a property from opponent
-            if (!stealable.isEmpty()) {
-                MonopolyCard stolen = stealable.get(0);
-                opponentHand.propertyPile.removeCard(stolen);
-                ((MonopolyHand) game.getCurrentPlayerHand()).propertyPile.addCard(stolen);
-            }
-        } else if (MonopolyFields.DEAL_BREAKER.equals(action)) {
-            // steal the complete set from opponent
-            for (MonopolyCard c : stealable) {
-                opponentHand.propertyPile.removeCard(c);
-                ((MonopolyHand) game.getCurrentPlayerHand()).propertyPile.addCard(c);
-            }
-        } else if (MonopolyFields.FORCED_DEAL.equals(action)) {
-            // trade one property with opponent
-            if (!stealable.isEmpty() && game.tradeProperty != null) {
-                MonopolyCard stolen = stealable.get(0);
-                opponentHand.propertyPile.removeCard(stolen);
-                ((MonopolyHand) game.getCurrentPlayerHand()).propertyPile.addCard(stolen);
+        game.currentHand().addCard(game.deck.remove(0));
+        game.currentHand().addCard(game.deck.remove(0));
+    }
+}
 
-                MonopolyHand currentHand = (MonopolyHand) game.getCurrentPlayerHand();
-                currentHand.propertyPile.removeCard(game.tradeProperty);
-                opponentHand.propertyPile.addCard(game.tradeProperty);
-                game.tradeProperty = null;
+class JustSayNoCard extends ActionCard {
+    public JustSayNoCard(String value, MonopolyDeal game) {
+        super(value, MonopolyFields.JUST_SAY_NO, game);
+    }
+}
 
-            }
-        } else if (MonopolyFields.JUST_SAY_NO.equals(action)) {
-            // cancel an opponent's action
+class SlyDealCard extends ActionCard {
+    public SlyDealCard(String value, MonopolyDeal game) {
+        super(value, MonopolyFields.SLY_DEAL, game);
+    }
 
-        } else if (MonopolyFields.DEBT_COLLECTOR.equals(action) || MonopolyFields.BIRTHDAY.equals(action)) {
-            // force opponent to pay you $5
-            // either put properties into property pile or money into bank
-            for (MonopolyCard c : stealable) {
-                if (c instanceof PropertyCard) {
-                    opponentHand.propertyPile.removeCard(c);
-                    ((MonopolyHand) game.getCurrentPlayerHand()).propertyPile.addCard(c);
-                } else {
-                    opponentHand.bankPile.removeCard(c);
-                    ((MonopolyHand) game.getCurrentPlayerHand()).bankPile.addCard(c);
+    @Override
+    public boolean requiresStealingChoice() { return true; }
+
+    @Override
+    public boolean canPlay() {
+        return !MonopolyComputer.calculateNonSetProperties(game.opponentHand()).isEmpty();
+    }
+
+    @Override
+    public void setGlowingCards() {
+        for (Card card : MonopolyComputer.calculateNonSetProperties(game.opponentHand())) {
+            ((MonopolyCard) card).glowing = true;
+        }
+    }
+
+    @Override
+    public void performAction() {
+        game.transferCards(game.stolenCards, game.opponentHand(), game.currentHand());
+    }
+}
+
+class DealBreakerCard extends ActionCard {
+    public DealBreakerCard(String value, MonopolyDeal game) {
+        super(value, MonopolyFields.DEAL_BREAKER, game);
+    }
+
+    @Override
+    public boolean requiresStealingChoice() { return true; }
+
+    @Override
+    public boolean canPlay() {
+        return MonopolyComputer.calculateNumSets(game.opponentHand()) > 0;
+    }
+
+    @Override
+    public void setGlowingCards() {
+        for (String color : MonopolyComputer.calculateSets(game.opponentHand())) {
+            for (Card card : game.opponentHand().propertyPile.getCards()) {
+                if (((PropertyCard) card).color.equals(color)) {
+                    ((MonopolyCard) card).glowing = true;
                 }
             }
         }
-        game.stolenCards.clear(); // clear stolen cards after performing action
-        // Remove the action card from player's hand after performing action
-        game.playCard(this, game.getCurrentPlayerHand());
     }
 
-    public String getAction() {
-        return action;
+    @Override
+    public boolean handleStealingChoice(Card clickedCard) {
+        String colorToSteal = ((PropertyCard) clickedCard).color;
+        for (Card card : game.opponentHand().propertyPile.getCards()) {
+            if (((PropertyCard) card).color.equals(colorToSteal)) {
+                game.stolenCards.add((MonopolyCard) card);
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public void performAction() {
+        game.transferCards(game.stolenCards, game.opponentHand(), game.currentHand());
+    }
+}
+
+class ForcedDealCard extends ActionCard {
+    public ForcedDealCard(String value, MonopolyDeal game) {
+        super(value, MonopolyFields.FORCED_DEAL, game);
+    }
+
+    @Override
+    public boolean requiresStealingChoice() { return true; }
+
+    @Override
+    public boolean canPlay() {
+        return !MonopolyComputer.calculateNonSetProperties(game.opponentHand()).isEmpty()
+                && game.currentHand().propertyPile.getSize() > 0;
+    }
+
+    @Override
+    public void setGlowingCards() {
+        if (game.stolenCards.isEmpty()) {
+            for (Card card : MonopolyComputer.calculateNonSetProperties(game.opponentHand())) {
+                ((MonopolyCard) card).glowing = true;
+            }
+        } else {
+            game.stolenCards.get(0).glowing = true;
+        }
+        if (game.tradeProperty != null) {
+            game.tradeProperty.glowing = true;
+        } else {
+            for (Card card : MonopolyComputer.calculateNonSetProperties(game.currentHand())) {
+                ((MonopolyCard) card).glowing = true;
+            }
+        }
+    }
+
+    @Override
+    public boolean handleStealingChoice(Card clickedCard) {
+        
+        if (game.stolenCards.isEmpty() && game.opponentHand().propertyPile.getCards().contains(clickedCard)) {
+            game.stolenCards.add((MonopolyCard) clickedCard);
+        }
+        if (game.currentHand().propertyPile.getCards().contains(clickedCard)) {
+            game.tradeProperty = (PropertyCard) clickedCard;
+        }
+        
+        return !game.stolenCards.isEmpty() && game.tradeProperty != null;
+    }
+
+    @Override
+    public void performAction() {
+        if (!game.stolenCards.isEmpty() && game.tradeProperty != null) {
+            MonopolyCard stolen = game.stolenCards.get(0);
+            game.opponentHand().propertyPile.removeCard(stolen);
+            game.currentHand().propertyPile.addCard(stolen);
+            game.currentHand().propertyPile.removeCard(game.tradeProperty);
+            game.opponentHand().propertyPile.addCard(game.tradeProperty);
+            game.tradeProperty = null;
+        }
+    }
+}
+
+/** Covers both Debt Collector ($5) and Birthday ($2) */
+class PaymentCard extends ActionCard {
+    int amount;
+
+    public PaymentCard(String value, String action, int amount, MonopolyDeal game) {
+        super(value, action, game);
+        this.amount = amount;
+    }
+
+    @Override
+    public boolean requiresStealingChoice() { return true; }
+
+    @Override
+    public boolean canPlay() {
+        return game.opponentHand().bankPile.getSize() > 0 || game.opponentHand().propertyPile.getSize() > 0;
+    }
+
+    @Override
+    public void setGlowingCards() {
+        if (!game.playerOneTurn) {
+            MonopolyHand playerHand = game.opponentHand();
+            for (Card card : playerHand.bankPile.getCards()) {
+                ((MonopolyCard) card).glowing = true;
+            }
+            for (Card card : playerHand.propertyPile.getCards()) {
+                ((MonopolyCard) card).glowing = true;
+            }
+            game.neededMoneyFromOpponent = amount;
+        }
+    }
+
+    @Override
+    public void performAction() {
+        game.transferCards(game.stolenCards, game.opponentHand(), game.currentHand());
     }
 }
 

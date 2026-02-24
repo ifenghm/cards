@@ -66,7 +66,7 @@ class MonopolyComputer {
         }
         // only play pass go after playing money cards
         for (Card c : computerHand.getCards()) {
-            if (c instanceof ActionCard && MonopolyFields.PASS_GO.equals(((ActionCard) c).getAction())) {
+            if (c instanceof PassGoCard) {
                 game.handleActionCard((ActionCard) c);
                 System.out.println("Computer plays Pass Go to draw cards");
                 return true;
@@ -119,7 +119,7 @@ class MonopolyComputer {
         for (String set : opponentSets) {
             // check if have deal breaker and can steal the set
             for (Card c : computerHand.getCards()) {
-                if (c instanceof ActionCard && MonopolyFields.DEAL_BREAKER.equals(((ActionCard) c).getAction())) {
+                if (c instanceof DealBreakerCard) {
                     game.handleActionCard((ActionCard) c);
                     return true;
                 }
@@ -130,34 +130,21 @@ class MonopolyComputer {
 
     static boolean actionCardStrategy(MonopolyDeal game, MonopolyHand computerHand, MonopolyHand opponentHand) {
         for (Card c : computerHand.getCards()) {
-            if (c instanceof ActionCard) {
-                ActionCard actionCard = (ActionCard) c;
-                String action = actionCard.getAction();
+            if (c instanceof ActionCard actionCard && !(c instanceof PassGoCard) && !(c instanceof JustSayNoCard)) {
+                if (!actionCard.canPlay()) continue;
 
-                boolean opponentHasMoneyOrProps = opponentHand.bankPile.getSize() > 0
-                        || opponentHand.propertyPile.getSize() > 0;
-                boolean opponentHasStealableProps = !calculateNonSetProperties(opponentHand).isEmpty();
-                boolean youHaveProperties = computerHand.propertyPile.getSize() > 0;
+                boolean isStealAction = c instanceof SlyDealCard || c instanceof ForcedDealCard;
 
-                boolean isMoneyAction = (MonopolyFields.DEBT_COLLECTOR.equals(action)
-                        || MonopolyFields.BIRTHDAY.equals(action)) && opponentHasMoneyOrProps;
-                boolean isStealAction = (MonopolyFields.SLY_DEAL.equals(action) && opponentHasStealableProps)
-                        || (MonopolyFields.FORCED_DEAL.equals(action) && opponentHasStealableProps
-                                && youHaveProperties);
-
-                if (isMoneyAction || isStealAction) {
-                    if (isStealAction) {
-                        // calculate the best thing to steal
-                        Card bestCard = bestCardToSteal(opponentHand);
-                        if (bestCard != null) {
-                            game.stolenCards.add((MonopolyCard) bestCard);
-                        }
+                if (isStealAction) {
+                    // calculate the best thing to steal
+                    Card bestCard = bestCardToSteal(opponentHand);
+                    if (bestCard != null) {
+                        game.stolenCards.add((MonopolyCard) bestCard);
                     }
-                    game.selectedCard = actionCard;
-                    game.handleActionCard(actionCard);
-                    System.out.println("Computer plays action card: " + action);
-                    return true;
                 }
+                game.selectedCard = actionCard;
+                game.handleActionCard(actionCard);
+                return true;
             }
         }
         return false;
@@ -186,29 +173,25 @@ class MonopolyComputer {
     }
 
     public static List<MonopolyCard> selectCardsToGiveUp(MonopolyHand hand, int amountNeeded, List<MonopolyCard> stolenCards) {
-        int totalValue = 0;
+        int paid = 0;
+        // 1) Bank money, 2) non-set properties, 3) set properties (least valuable first)
+        paid = addCardsUpTo(hand.bankPile.getCards(), amountNeeded, paid, stolenCards);
+        paid = addCardsUpTo(calculateNonSetProperties(hand), amountNeeded, paid, stolenCards);
 
-        // First, try to pay with money from bank
-        List<Card> bankCards = new ArrayList<>(hand.bankPile.getCards());
-        for (Card card : bankCards) {
-            if (totalValue >= amountNeeded)
-                break;
-            int value = Integer.parseInt(card.value);
-            totalValue += value;
+        List<Card> setProperties = new ArrayList<>(hand.propertyPile.getCards());
+        setProperties.removeAll(calculateNonSetProperties(hand));
+        setProperties.sort((a, b) -> Integer.parseInt(a.value) - Integer.parseInt(b.value));
+        addCardsUpTo(setProperties, amountNeeded, paid, stolenCards);
+        System.out.println(stolenCards + " cards selected to give up: ");
+        return stolenCards;
+    }
+
+    private static int addCardsUpTo(List<Card> cards, int amountNeeded, int paid, List<MonopolyCard> stolenCards) {
+        for (Card card : cards) {
+            if (paid >= amountNeeded) break;
+            paid += Integer.parseInt(card.value);
             stolenCards.add((MonopolyCard) card);
         }
-
-        // If still need more, give up properties (non-set properties first)
-        if (totalValue < amountNeeded) {
-            List<Card> nonSetProperties = calculateNonSetProperties(hand);
-            for (Card card : nonSetProperties) {
-                if (totalValue >= amountNeeded)
-                    break;
-                int value = Integer.parseInt(card.value);
-                totalValue += value;
-                stolenCards.add((MonopolyCard) card);
-            }
-        }
-        return stolenCards;
+        return paid;
     }
 }

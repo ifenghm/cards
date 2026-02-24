@@ -15,7 +15,7 @@ public class CardGame {
     // Game state
     boolean playerOneTurn = true;
     Card lastPlayedCard;
-    boolean gameActive;
+    boolean gameActive = true;
 
     // UI
     ClickableRectangle drawButton;
@@ -23,10 +23,10 @@ public class CardGame {
     int drawButtonY = 400;
     int drawButtonWidth = 100;
     int drawButtonHeight = 35;
+    ClickableRectangle playAgain;
 
     public CardGame() {
         initializeGame();
-        dealCards(6);
     }
 
     protected void initializeGame() {
@@ -37,6 +37,7 @@ public class CardGame {
         drawButton.width = drawButtonWidth;
         drawButton.height = drawButtonHeight;
         drawButton.text = "Draw";
+        playAgain = new ClickableRectangle(App.gameWidth / 2 - 50, 310, 100, 35, "Play Again");
 
         // Initialize decks and hands
         deck = new ArrayList<>();
@@ -46,6 +47,7 @@ public class CardGame {
         gameActive = true;
 
         createDeck();
+        dealCards(6);
     }
 
     protected void createDeck() {
@@ -102,6 +104,12 @@ public class CardGame {
         }
     }
 
+    public void handlePlayAgainClick(int mouseX, int mouseY) {
+        if (playAgain.isClicked(mouseX, mouseY) && !gameActive) {
+            initializeGame();
+        }
+    }
+
     public boolean playCard(Card card, Hand hand) {
         // Check if card is valid to play
         if (!isValidPlay(card)) {
@@ -114,9 +122,23 @@ public class CardGame {
         // Add to discard pile
         discardPile.add(card);
         lastPlayedCard = card;
+        checkWinCondition();
+        if (!gameActive) {
+            return true;
+        }
         // Switch turns
         switchTurns();
         return true;
+    }
+
+    public void checkWinCondition() {
+        if (playerOneHand.getSize() == 0) {
+            System.out.println("Player One wins!");
+            gameActive = false;
+        } else if (playerTwoHand.getSize() == 0) {
+            System.out.println("Player Two wins!");
+            gameActive = false;
+        } 
     }
 
     public void switchTurns() {
@@ -193,5 +215,20 @@ public class CardGame {
     public void drawChoices(PApplet app) {
         // this method is available for overriding
         // if you want to draw additional things (like Uno's wild color choices)
+    }
+
+    public void drawPlayAgain(PApplet app) {
+        if (gameActive) {
+            return;
+        }
+        // Draw game over screen
+        app.fill(0, 150);
+        app.rect(App.gameWidth / 2 - 150, 200, 300, 150);
+        app.fill(255);
+        app.textAlign(app.CENTER, app.CENTER);
+        app.textSize(24);
+        app.text("Game Over!", App.gameWidth / 2, 250);
+        app.text(getCurrentPlayer() + " wins!", App.gameWidth / 2, 290);
+        playAgain.draw(app);
     }
 }

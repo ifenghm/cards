@@ -1,0 +1,24 @@
+cardType,value,suit,action,color,rent,count
+Money,1,Money,,,6
+Money,2,Money,,,5
+Money,3,Money,,,3
+Money,4,Money,,,3
+Money,5,Money,,,2
+Money,10,Money,,,1
+Property,1,Property,,Light Blue,1,3
+Property,1,Property,,Brown,1,2
+Property,1,Property,,Utility,1,2
+Property,1,Property,,Railroad,1,4
+Property,2,Property,,Orange,2,3
+Property,2,Property,,Pink,2,3
+Property,2,Property,,Yellow,2,3
+Property,3,Property,,Red,3,3
+Property,3,Property,,Green,3,3
+Property,4,Property,,Blue,4,2
+Action,1,Action,Pass Go,,,10
+Action,5,Action,Deal Breaker,,,2
+Action,4,Action,Just Say No,,,3
+Action,3,Action,Sly Deal,,,3
+Action,3,Action,Forced Deal,,,3
+Action,3,Action,Debt Collector,,,3
+Action,2,Action,Birthday,,,3

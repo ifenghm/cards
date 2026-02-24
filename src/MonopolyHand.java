@@ -48,12 +48,12 @@ public class MonopolyHand extends Hand {
         sketch.stroke(255, 0, 0);
         sketch.rect(x + width / 3 + 10, y + height / 2 - 10, width / 2, height / 2, 10);
         sketch.text("Properties", x + width / 3 + 20, y + height / 2 + 10);
-        propertyPile.positionCards(x + width / 3 + 20, y + height / 2 + 10, 80, 120, 60);
+        propertyPile.positionCardsInGrid(x + width / 3 + 20, y + height / 2 + 10, 40, 60, 40, 10);
         propertyPile.draw(sketch);
         sketch.pop();
     }
 
-    private void positionBankPile() {
+    void positionBankPile() {
         int cardW = 40;
         int cardH = 60;
         int colGap = 10;
@@ -77,6 +77,7 @@ public class MonopolyHand extends Hand {
             int cardY = gridY + slot[1] * (cardH + rowGap) - stackIndex * 4;
             card.setPosition(cardX, cardY, cardW, cardH);
             card.setSize(cardW, cardH);
+            card.setClickableWidth(cardW);
             valueStackCounts.put(card.value, stackIndex + 1);
         }
     }
