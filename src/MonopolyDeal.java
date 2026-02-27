@@ -183,18 +183,10 @@ public class MonopolyDeal extends CardGame {
         if (isStealing) {
             return true;
         }
-        if (!((Button) drawButton).isDisabled()) {
-            System.out.println("You must draw before playing cards!");
+        if (!ableToPlayNow()) {
             return false;
         }
-        if (playsCount >= 3) {
-            System.out.println("You have already played 3 cards this turn!");
-            return false;
-        }
-        if (selectedCard == null) {
-            return false;
-        }
-        return true;
+        return selectedCard != null;
     }
 
     private Card handleStealingChoice(Card clickedCard) {
@@ -234,6 +226,18 @@ public class MonopolyDeal extends CardGame {
         return clickedCard;
     }
 
+    private boolean ableToPlayNow() {
+        if (!((Button) drawButton).isDisabled()) {
+            System.out.println("You must draw before playing cards!");
+            return false;
+        }
+        if (playsCount >= 3) {
+            System.out.println("You have already played 3 cards this turn!");
+            return false;
+        }
+        return true;
+    }
+
     @Override
     public void handleCardClick(int mouseX, int mouseY) {
         // Handle stealing choices first if in stealing mode
@@ -245,6 +249,11 @@ public class MonopolyDeal extends CardGame {
         // Handle action card choices first if we're already choosing
         if (choosingAction) {
             if (playActionButton.isClicked(mouseX, mouseY)) {
+                if (!ableToPlayNow()) {
+                    deselectCard();
+                    choosingAction = false;
+                    return;
+                }
                 handleActionCard((ActionCard) selectedCard);
                 return;
             } else if (bankActionButton.isClicked(mouseX, mouseY)) {
