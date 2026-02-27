@@ -1,3 +1,6 @@
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+
 import processing.core.PApplet;
 
 public class MonopolyCard extends Card {
@@ -147,6 +150,8 @@ class PropertyCard extends MonopolyCard {
 class ActionCard extends MonopolyCard {
     MonopolyDeal game;
     public String action;
+    ArrayList<MonopolyCard> stealableCards = new ArrayList<>(); // cards that can be stolen with this action card, set when the card is
+                                            // played
 
     public ActionCard(String value, String action, MonopolyDeal game) {
         super(value, "Action");
@@ -162,11 +167,36 @@ class ActionCard extends MonopolyCard {
         sketch.text(action, x, y + height / 2 + 16);
     }
 
-    public boolean requiresStealingChoice() { return false; }
-    public String getAction() { return action; }
-    public boolean canPlay() { return true; }
-    public void setGlowingCards() {}
-    public void performAction() {}
+    public boolean requiresStealingChoice() {
+        return false;
+    }
+
+    public String getAction() {
+        return action;
+    }
+
+    public boolean canPlay() {
+        return true;
+    }
+
+    public ArrayList<MonopolyCard> getStealableCards() {
+        return stealableCards;
+    }
+
+    public void setStealableCards() {
+        // we can glow any just say no
+        if (action.equals(MonopolyFields.JUST_SAY_NO)) {
+            for (Card card : game.opponentHand().getCards()) {
+                if (card instanceof ActionCard && ((ActionCard) card).action.equals(MonopolyFields.JUST_SAY_NO)) {
+                    stealableCards.add((MonopolyCard) card);
+                    ((MonopolyCard) card).glowing = true;
+                }
+            }
+        }
+    }
+
+    public void performAction() {
+    }
 
     /** Handle a card click during stealing/selection. Returns true when done. */
     public boolean handleStealingChoice(Card clickedCard) {
@@ -182,8 +212,13 @@ class PassGoCard extends ActionCard {
 
     @Override
     public void performAction() {
+        if (game.deck.isEmpty()) {
+            return;
+        }
         game.currentHand().addCard(game.deck.remove(0));
-        game.currentHand().addCard(game.deck.remove(0));
+        if (!game.currentHand().getCards().isEmpty()) {
+            game.currentHand().addCard(game.deck.remove(0));
+        }
     }
 }
 
@@ -199,7 +234,9 @@ class SlyDealCard extends ActionCard {
     }
 
     @Override
-    public boolean requiresStealingChoice() { return true; }
+    public boolean requiresStealingChoice() {
+        return true;
+    }
 
     @Override
     public boolean canPlay() {
@@ -207,7 +244,7 @@ class SlyDealCard extends ActionCard {
     }
 
     @Override
-    public void setGlowingCards() {
+    public void setStealableCards() {
         for (Card card : MonopolyComputer.calculateNonSetProperties(game.opponentHand())) {
             ((MonopolyCard) card).glowing = true;
         }
@@ -225,7 +262,9 @@ class DealBreakerCard extends ActionCard {
     }
 
     @Override
-    public boolean requiresStealingChoice() { return true; }
+    public boolean requiresStealingChoice() {
+        return true;
+    }
 
     @Override
     public boolean canPlay() {
@@ -233,7 +272,7 @@ class DealBreakerCard extends ActionCard {
     }
 
     @Override
-    public void setGlowingCards() {
+    public void setStealableCards() {
         for (String color : MonopolyComputer.calculateSets(game.opponentHand())) {
             for (Card card : game.opponentHand().propertyPile.getCards()) {
                 if (((PropertyCard) card).color.equals(color)) {
@@ -245,6 +284,9 @@ class DealBreakerCard extends ActionCard {
 
     @Override
     public boolean handleStealingChoice(Card clickedCard) {
+        if (!getStealableCards().contains(clickedCard)) {
+            return false;
+        }
         String colorToSteal = ((PropertyCard) clickedCard).color;
         for (Card card : game.opponentHand().propertyPile.getCards()) {
             if (((PropertyCard) card).color.equals(colorToSteal)) {
@@ -266,7 +308,9 @@ class ForcedDealCard extends ActionCard {
     }
 
     @Override
-    public boolean requiresStealingChoice() { return true; }
+    public boolean requiresStealingChoice() {
+        return true;
+    }
 
     @Override
     public boolean canPlay() {
@@ -275,7 +319,7 @@ class ForcedDealCard extends ActionCard {
     }
 
     @Override
-    public void setGlowingCards() {
+    public void setStealableCards() {
         if (game.stolenCards.isEmpty()) {
             for (Card card : MonopolyComputer.calculateNonSetProperties(game.opponentHand())) {
                 ((MonopolyCard) card).glowing = true;
@@ -294,14 +338,14 @@ class ForcedDealCard extends ActionCard {
 
     @Override
     public boolean handleStealingChoice(Card clickedCard) {
-        
-        if (game.stolenCards.isEmpty() && game.opponentHand().propertyPile.getCards().contains(clickedCard)) {
-            game.stolenCards.add((MonopolyCard) clickedCard);
-        }
+        // if (getSt)ealableCards().contains(clickedCard)) {
+            if (game.stolenCards.isEmpty() && game.opponentHand().propertyPile.getCards().contains(clickedCard)) {
+                game.stolenCards.add((MonopolyCard) clickedCard);
+            }
         if (game.currentHand().propertyPile.getCards().contains(clickedCard)) {
             game.tradeProperty = (PropertyCard) clickedCard;
         }
-        
+
         return !game.stolenCards.isEmpty() && game.tradeProperty != null;
     }
 
@@ -328,7 +372,9 @@ class PaymentCard extends ActionCard {
     }
 
     @Override
-    public boolean requiresStealingChoice() { return true; }
+    public boolean requiresStealingChoice() {
+        return true;
+    }
 
     @Override
     public boolean canPlay() {
@@ -336,7 +382,7 @@ class PaymentCard extends ActionCard {
     }
 
     @Override
-    public void setGlowingCards() {
+    public void setStealableCards() {
         if (!game.playerOneTurn) {
             MonopolyHand playerHand = game.opponentHand();
             for (Card card : playerHand.bankPile.getCards()) {

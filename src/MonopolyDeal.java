@@ -21,6 +21,10 @@ public class MonopolyDeal extends CardGame {
     boolean isStealing = false; // whether the stealing part of the action is happening
     int neededMoneyFromOpponent = 0; // for action cards that require payment, track how much is needed from opponent
 
+    boolean canNope = false; // whether the current action can be noped
+    boolean choosingNope = false; // whether player is choosing to just say no to an action
+    boolean noped = false; // whether the current action has been noped
+
     Button playActionButton = new Button(App.gameWidth / 2 - 80, Y_START - 50, 80, drawButtonHeight, "Play Action");
     Button bankActionButton = new Button(App.gameWidth / 2 + 10, Y_START - 50, 80, drawButtonHeight, "Bank");
     // counts of each property types
@@ -145,6 +149,7 @@ public class MonopolyDeal extends CardGame {
         // also handle end turn
         if (endTurnButton.isClicked(mouseX, mouseY) && playerOneTurn) {
             switchTurns();
+            deselectCard();
             ((Button) drawButton).setDisabled(false); // enable draw button for new turn
         }
     }
@@ -163,6 +168,7 @@ public class MonopolyDeal extends CardGame {
             return true; // handled later in handleActionCard()
         }
         // Remove card from hand
+        deselectCard();
         hand.removeCard(card);
         playsCount++;
         return true;
@@ -183,6 +189,9 @@ public class MonopolyDeal extends CardGame {
         }
         if (playsCount >= 3) {
             System.out.println("You have already played 3 cards this turn!");
+            return false;
+        }
+        if (selectedCard == null) {
             return false;
         }
         return true;
@@ -227,31 +236,27 @@ public class MonopolyDeal extends CardGame {
 
     @Override
     public void handleCardClick(int mouseX, int mouseY) {
-        // Handle stealing choices if in stealing mode
+        // Handle stealing choices first if in stealing mode
         if (isStealing) {
             Card clickedCard = getClickedCardFromAllPiles(mouseX, mouseY);
             handleStealingChoice(clickedCard);
             return;
         }
-
         // Handle action card choices first if we're already choosing
         if (choosingAction) {
-            if (isValidPlay(selectedCard)) {
-                if (playActionButton.isClicked(mouseX, mouseY)) {
-                    handleActionCard((ActionCard) selectedCard);
-                    return;
-                } else if (bankActionButton.isClicked(mouseX, mouseY)) {
-                    // add to bank
+            if (playActionButton.isClicked(mouseX, mouseY)) {
+                handleActionCard((ActionCard) selectedCard);
+                return;
+            } else if (bankActionButton.isClicked(mouseX, mouseY)) {
+                // add to bank
+                if (isValidPlay(selectedCard)) {
                     selectedCard.suit = "Money";
                     playCard(selectedCard, getCurrentPlayerHand());
-                    return;
                 }
-                // deselect the card if we click outside the buttons while choosing action
-                choosingAction = false;
-                selectedCard.setSelected(false, selectedCardRaiseAmount);
-                selectedCard = null;
+                return;
             }
-            // If we're choosing action but didn't click a button, just return
+            deselectCard();
+            choosingAction = false;
             return;
         }
 
@@ -282,7 +287,7 @@ public class MonopolyDeal extends CardGame {
                 // player
                 isStealing = true;
                 actionCardBeingPlayed = actionCard;
-                actionCard.setGlowingCards();
+                actionCard.setStealableCards();
                 System.out.println("Waiting for player to select cards for action: " + action);
                 return; // won't finish, waiting
             }
@@ -333,13 +338,13 @@ public class MonopolyDeal extends CardGame {
         }
     }
 
+    // Check all possible locations for cards
     private Card getClickedCardFromAllPiles(int mouseX, int mouseY) {
-        // Check all possible locations for cards
+        // Check player's hand first
         Card clicked = getClickedCard(mouseX, mouseY);
         if (clicked != null)
             return clicked;
 
-        // add bankpilecards
         ArrayList<Card> allCards = new ArrayList<>();
         allCards.addAll(currentHand().bankPile.getCards());
         allCards.addAll(opponentHand().bankPile.getCards());
@@ -427,10 +432,7 @@ public class MonopolyDeal extends CardGame {
         choosingAction = false;
         isStealing = false;
         actionCardBeingPlayed = null;
-        if (selectedCard != null) {
-            selectedCard.setSelected(false, selectedCardRaiseAmount);
-            selectedCard = null;
-        }
+        deselectCard();
     }
 
     private void positionCards() {

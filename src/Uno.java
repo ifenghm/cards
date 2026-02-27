@@ -21,18 +21,18 @@ public class Uno extends CardGame {
         // Create deck (Uno has 108 cards)
         // Create standard cards (2 of each color/value combination except 0)
         for (String color : colors) {
-            deck.add(new Card("0", color)); // One 0 card per color
+            deck.add(new UnoCard("0", color)); // One 0 card per color
             for (String value : values) {
-                deck.add(new Card(value, color));
-                deck.add(new Card(value, color)); // Two of each
+                deck.add(new UnoCard(value, color));
+                deck.add(new UnoCard(value, color)); // Two of each
 
             }
         }
         // Add wild cards (4 of each type)
         for (int i = 0; i < 4; i++) {
             // suit, value
-            deck.add(new Card("Wild", "Wild"));
-            deck.add(new Card("Wild", "Draw Four"));
+            deck.add(new UnoCard("Wild", "Wild"));
+            deck.add(new UnoCard("Draw Four", "Wild"));
         }
     }
 
@@ -49,6 +49,7 @@ public class Uno extends CardGame {
             lastPlayedCard.suit = colors[(int) (Math.random() * colors.length)];
         }
         discardPile.add(lastPlayedCard);
+        choosingWildColor = false;
 
         initializeWildColorButtons();
     }
@@ -57,42 +58,17 @@ public class Uno extends CardGame {
     public void handleCardClick(int mouseX, int mouseY) {
         if (choosingWildColor) {
             handleWildChooserClick(mouseX, mouseY);
-            return;
         }
-        UnoCard clickedCard = (UnoCard) getClickedCard(mouseX, mouseY);
-        if (clickedCard == null) {
-            return;
+        super.handleCardClick(mouseX, mouseY);
+        if (selectedCard != null && "Wild".equals(selectedCard.suit)) {
+            pendingWildCard = (UnoCard) selectedCard;
+            choosingWildColor = true;
         }
-        // this is for the first time
-        if (selectedCard == null) {
-            selectedCard = clickedCard;
-            selectedCard.setSelected(true, selectedCardRaiseAmount);
-            return;
-        }
-        // this is the second time
-        if (clickedCard == selectedCard) {
-            System.out.println("playing card: " + selectedCard.value + " of " + selectedCard.suit);
-            if ("Wild".equals(selectedCard.suit)) {
-                pendingWildCard = (UnoCard) selectedCard;
-                choosingWildColor = true;
-                return;
-            }
-            if (playCard((UnoCard) selectedCard, playerOneHand)) {
-                selectedCard.setSelected(false, selectedCardRaiseAmount);
-                selectedCard = null;
-            }
-            return;
-        }
-
-        selectedCard.setSelected(false, selectedCardRaiseAmount);
-        selectedCard = clickedCard;
-        selectedCard.setSelected(true, selectedCardRaiseAmount);
     }
 
     @Override
     protected boolean isValidPlay(Card card) {
         UnoCard unoCard = (UnoCard) card;
-        // Wild cards are always valid
         if (unoCard.suit.equals("Wild")) {
             return true;
         }
@@ -104,7 +80,13 @@ public class Uno extends CardGame {
 
     @Override
     public boolean playCard(Card card, Hand hand) {
-        super.playCard(card, hand);
+        if (!super.playCard(card, hand)) {
+            return false;
+        }
+        checkWinCondition();
+        if (!gameActive) {
+            return true;
+        }
         handleSpecialCards(card);
         return true;
     }
@@ -137,8 +119,9 @@ public class Uno extends CardGame {
             return;
         }
         if (playCard(choice, playerTwoHand)) {
-            if ("Wild".equals(choice.suit)) {
-                choice.suit = computerPlayer.chooseComputerWildColor(playerTwoHand);
+            if (choice.suit.equals("Wild")) {
+                String chosenColor = computerPlayer.chooseComputerWildColor(playerTwoHand);
+                choice.suit = chosenColor;
             }
             playerOneHand.positionCards(50, 450, 80, 120, 20);
             playerTwoHand.positionCards(50, 50, 80, 120, 20);
@@ -196,12 +179,15 @@ public class Uno extends CardGame {
                     pendingWildCard = null;
                     choosingWildColor = false;
                     selectedCard = null;
-                    playerOneHand.positionCards(50, 450, 80, 120, 20);
-                    playerTwoHand.positionCards(50, 50, 80, 120, 20);
                 }
                 return;
             }
         }
+        // If click outside buttons, just cancel the wild card play
+        pendingWildCard.setSelected(false, raiseAmount);
+        pendingWildCard = null;
+        selectedCard = null;
+        choosingWildColor = false;
     }
 
     private void initializeWildColorButtons() {

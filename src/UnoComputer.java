@@ -21,30 +21,28 @@ public class UnoComputer {
 				return card;
 			}
 		}
-
 		return wildCandidate;
 	}
 
 	public String chooseComputerWildColor(Hand hand) {
 		// make hashmap to count colors
 		HashMap<String, Integer> colorCount = new HashMap<>();
-
-        for (int i = 0; i < hand.getSize(); i++) {
-            Card card = hand.getCard(i);
-            if (card == null) {
-                continue;
-            }
-            colorCount.put(card.suit, colorCount.getOrDefault(card.suit, 0) + 1);
-        }
-        // find color with most cards
-        String best = "Red";
-        int maxCount = 0;
-        for (String color : colorCount.keySet()) {
-            if (colorCount.get(color) > maxCount) {
-                maxCount = colorCount.get(color);
-                best = color;
-            }
-        }
-        return best;
-    }
+		for (int i = 0; i < hand.getSize(); i++) {
+			Card card = hand.getCard(i);
+			if (card == null) {
+				continue;
+			}
+			colorCount.put(card.suit, colorCount.getOrDefault(card.suit, 0) + 1);
+		}
+		// find color with most cards
+		String best = "Red";
+		int maxCount = 0;
+		for (String color : colorCount.keySet()) {
+			if (colorCount.get(color) > maxCount) {
+				maxCount = colorCount.get(color);
+				best = color;
+			}
+		}
+		return best;
+	}
 }

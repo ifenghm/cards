@@ -1,3 +1,5 @@
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import processing.core.PApplet;
@@ -83,13 +85,11 @@ public class MonopolyHand extends Hand {
     }
 
     public void clearGlowingCards() {
-        for (Card card : getCards()) {
-            ((MonopolyCard) card).glowing = false;
-        }
-        for (Card card : bankPile.getCards()) {
-            ((MonopolyCard) card).glowing = false;
-        }
-        for (Card card : propertyPile.getCards()) {
+        ArrayList<Card> allCards = new ArrayList<>();
+        allCards.addAll(getCards());
+        allCards.addAll(bankPile.getCards());
+        allCards.addAll(propertyPile.getCards());
+        for (Card card : allCards) {
             ((MonopolyCard) card).glowing = false;
         }
     }

@@ -118,9 +118,10 @@ public class CardGame {
         }
         // Remove card from hand
         hand.removeCard(card);
-        card.setTurned(false);
+        card.setSelected(false, selectedCardRaiseAmount);
         // Add to discard pile
         discardPile.add(card);
+        card.setTurned(false);
         lastPlayedCard = card;
         checkWinCondition();
         if (!gameActive) {
@@ -138,7 +139,7 @@ public class CardGame {
         } else if (playerTwoHand.getSize() == 0) {
             System.out.println("Player Two wins!");
             gameActive = false;
-        } 
+        }
     }
 
     public void switchTurns() {
@@ -185,20 +186,23 @@ public class CardGame {
             selectedCard = clickedCard;
             selectedCard.setSelected(true, selectedCardRaiseAmount);
             return;
-        }
-
-        if (selectedCard == clickedCard) {
+        } else if (selectedCard == clickedCard) {
             System.out.println("playing card: " + selectedCard.value + " of " + selectedCard.suit);
-            if (playCard(selectedCard, playerOneHand)) {
-                selectedCard.setSelected(false, selectedCardRaiseAmount);
-                selectedCard = null;
-            }
+            playCard(selectedCard, playerOneHand);
             return;
         }
-        // change selection
+        // and then otherwise, change selection
+        // old selected card should be deselected, and new one should be selected
         selectedCard.setSelected(false, selectedCardRaiseAmount);
         selectedCard = clickedCard;
-        selectedCard.setSelected(true, selectedCardRaiseAmount);
+        clickedCard.setSelected(true, selectedCardRaiseAmount);
+    }
+
+    public void deselectCard() {
+        if (selectedCard != null) {
+            selectedCard.setSelected(false, selectedCardRaiseAmount);
+            selectedCard = null;
+        }
     }
 
     // return the card that is clicked!

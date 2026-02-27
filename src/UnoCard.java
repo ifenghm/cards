@@ -6,8 +6,8 @@ public class UnoCard extends Card {
     }
 
     @Override
-    public void draw(PApplet sketch) {
-        super.draw(sketch);
+    public void drawFront(PApplet sketch) {
+        super.drawFront(sketch);
         // set card color based on suit
         switch (suit) {
             case "Red":
